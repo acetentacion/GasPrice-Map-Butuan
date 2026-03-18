@@ -62,6 +62,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </button>
+            <!-- MOVE ADMIN BUTTON HERE -->
+            <button onclick="window.location.href='admin.html'" id="admin-approvals-btn" style="display:none;" class="p-2 bg-yellow-500 text-white rounded-full font-bold">Admin Approvals</button>
         </div>
     </header>
 
@@ -73,6 +75,7 @@
             <div>
                 <h2 id="station-name" class="text-2xl font-black text-gray-900 leading-none mb-1">Station Name</h2>
                 <p id="station-brand" class="text-blue-500 font-black uppercase text-[10px] tracking-[0.2em]">Brand</p>
+                <p id="station-address" class="text-gray-500 text-xs mb-2"></p>
             </div>
             <button onclick="closePanel()" class="bg-gray-100 p-2 rounded-full text-gray-400">✕</button>
         </div>
@@ -108,6 +111,12 @@
         <button onclick="openUpdateForm()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">
             Update Prices
         </button>
+
+        <!-- Admin tools (hidden by default) -->
+        <div id="admin-tools" style="display:none; margin-top:10px;">
+            <button id="flag-btn" class="bg-yellow-500 text-white px-4 py-2 rounded mr-2">Flag as Fake</button>
+            <button id="remove-btn" class="bg-red-600 text-white px-4 py-2 rounded">Remove Submission</button>
+        </div>
     </div>
 
     <div id="update-form" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -124,8 +133,12 @@
                     <input type="number" id="input-u91" step="0.01" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-black text-xl">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Unleaded 95</label>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Premium 95</label>
                     <input type="number" id="input-u95" step="0.01" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-black text-xl">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Upload Photo (optional)</label>
+                    <input type="file" id="price-photo" accept="image/*" class="w-full p-2 bg-gray-50 border-2 border-gray-100 rounded-xl">
                 </div>
                 <div class="flex gap-3 pt-4">
                     <button onclick="closeUpdateForm()" class="flex-1 py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">Cancel</button>
@@ -180,6 +193,11 @@
             </div>
         </div>
     </div>
+
+    <div id="pending-approvals" style="display:none; margin-top:10px;">
+    <h4 class="font-bold mb-2">Pending Submissions</h4>
+    <div id="pending-list"></div>
+</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -268,19 +286,21 @@
         console.error('Failed to fetch submitted prices:', err);
     }
 
-    // Butuan bounding box
-    const minLat = 8.9300, maxLat = 8.9900;
-    const minLng = 125.5200, maxLng = 125.5700;
-
     stations.forEach(s => {
         const lat = s.lat || s.center?.lat;
         const lon = s.lon || s.center?.lon;
         if (!lat || !lon) return;
-
-        // Only render markers within Butuan City bounds
-        if (lat < minLat || lat > maxLat || lon < minLng || lon > maxLng) return;
+        if (!isInButuan(lat, lon)) return;
 
         const name = s.tags.name || "Gas Station";
+        const brand = s.tags.brand || s.tags.operator || "Independent";
+        // Extract address details
+        const address = [
+            s.tags['addr:street'] || '',
+            s.tags['addr:city'] || '',
+            s.tags['addr:postcode'] || ''
+        ].filter(Boolean).join(', ');
+
         let closestSubmission = null;
         let minDistance = Infinity;
 
@@ -299,8 +319,10 @@
             .filter(sub =>
                 isInButuan(sub.lat, sub.lng) &&
                 sub.stationName.toLowerCase().trim() === name.toLowerCase().trim() &&
-                Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111 < 1
-            );
+                Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111 < 1 &&
+                sub.approved === true // <-- Only approved
+            )
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         // Pick the latest by timestamp
         const latestSubmission = stationSubmissions
@@ -314,15 +336,15 @@
 
         const marker = L.marker([lat, lon]).addTo(markerGroup);
         marker.on('click', () => {
-            const mockData = {
+            showStationDetails({
                 name: name,
-                brand: s.tags.brand || s.tags.operator || "Independent",
+                brand: brand,
                 lat: lat,
                 lng: lon,
+                address: address,
                 prices: prices,
                 submitted: latestSubmission
-            };
-            showStationDetails(mockData);
+            });
         });
     });
 
@@ -370,10 +392,11 @@
 
         // --- 3. UI Interaction ---
         function showStationDetails(data) {
-            currentStation = data; // Store for submissions/votes
+            currentStation = data;
             document.getElementById('station-name').innerText = data.name;
             document.getElementById('station-brand').innerText = data.brand;
-            
+            document.getElementById('station-address').innerText = data.address || 'Address not available';
+
             // Calculate and display distance
             const userLat = map.getCenter().lat;
             const userLng = map.getCenter().lng;
@@ -383,7 +406,7 @@
             const fuels = [
                 { label: 'Diesel', price: data.prices.diesel, color: 'nozzle-diesel' },
                 { label: 'Unleaded 91', price: data.prices.u91, color: 'nozzle-u91' },
-                { label: 'Unleaded 95', price: data.prices.u95, color: 'nozzle-u95' }
+                { label: 'Premium 95', price: data.prices.u95, color: 'nozzle-u95' }
             ];
 
             document.getElementById('price-list').innerHTML = fuels.map(f => `
@@ -416,8 +439,13 @@
                     if (stationSubmissions.length > 1) {
                         document.getElementById('history-list').innerHTML = stationSubmissions.slice(1, 4).map(h => `
                             <div class="p-3 bg-gray-50 rounded-xl">
-                                <p class="text-xs text-gray-500 mb-1">${getTimeAgo(new Date(h.timestamp))}</p>
-                                <p class="text-sm font-bold">Diesel: ₱${h.prices.diesel.toFixed(2)} | 91: ₱${h.prices.u91.toFixed(2)} | 95: ₱${h.prices.u95.toFixed(2)}</p>
+                                <p class="text-xs text-gray-500 mb-1">
+                                    ${getTimeAgo(new Date(h.timestamp))}
+                                    ${h.flagged ? '<span class="text-red-600 font-bold ml-2">⚠️ Flagged as Fake</span>' : ''}
+                                </p>
+                                <p class="text-sm font-bold">
+                                    Diesel: ₱${h.prices.diesel.toFixed(2)} | 91: ₱${h.prices.u91.toFixed(2)} | 95: ₱${h.prices.u95.toFixed(2)}
+                                </p>
                             </div>
                         `).join('');
                         document.getElementById('price-history').style.display = 'block';
@@ -442,10 +470,65 @@
                 const timeAgo = getTimeAgo(new Date(timestamp));
                 lastUpdate.innerText = `Updated ${timeAgo}`;
                 voteButtons.style.display = 'flex';
+
+                // --- NEW: Show submitter's trust score ---
+                if (data.submitted && data.submitted.username) {
+                    fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(data.submitted.username))
+                        .then(res => res.json())
+                        .then(userData => {
+                            document.getElementById('status-text').innerText += ` | Submitter Trust Score: ${userData.score || 1}`;
+                        });
+                }
+
+                // --- ADDED: Show flagged status ---
+                if (data.submitted && data.submitted.flagged) {
+                    document.getElementById('status-text').innerText += ' | ⚠️ Flagged as Fake by Admin';
+                }
             } else {
                 statusText.innerText = 'Status: No data';
                 lastUpdate.innerText = 'Updated --';
                 voteButtons.style.display = 'none';
+            }
+
+            // Show admin tools if user is admin
+            if (window.isAdmin) {
+                document.getElementById('admin-tools').style.display = 'block';
+                document.getElementById('flag-btn').onclick = () => {
+                    fetch('http://localhost:3000/api/flag-price', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            stationName: data.name,
+                            lat: data.lat,
+                            lng: data.lng,
+                            adminUsername: username
+                        })
+                    }).then(res => res.json()).then(result => {
+                        alert(result.message || result.error);
+                        fetchGasStations();
+                    });
+                };
+                document.getElementById('remove-btn').onclick = () => {
+                    fetch('http://localhost:3000/api/remove-price', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            stationName: data.name,
+                            lat: data.lat,
+                            lng: data.lng,
+                            adminUsername: username
+                        })
+                    }).then(res => res.json()).then(result => {
+                        alert(result.message || result.error);
+                        fetchGasStations();
+                    });
+                };
+            } else {
+                document.getElementById('admin-tools').style.display = 'none';
+            }
+
+            if (data.submitted && data.submitted.photoUrl) {
+                document.getElementById('station-address').innerHTML += `<br><img src="${data.submitted.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px; margin-top:8px;">`;
             }
 
             const panel = document.getElementById('info-panel');
@@ -480,61 +563,40 @@
                 return;
             }
 
-            const submittedPrices = { diesel, u91, u95 };
             const stationName = document.getElementById('station-name').innerText.toLowerCase().trim();
             const lat = currentStation ? currentStation.lat : map.getCenter().lat;
             const lng = currentStation ? currentStation.lng : map.getCenter().lng;
 
+            const formData = new FormData();
+            formData.append('stationName', stationName);
+            formData.append('diesel', diesel);
+            formData.append('u91', u91);
+            formData.append('u95', u95);
+            formData.append('timestamp', new Date().toISOString());
+            formData.append('username', username);
+            formData.append('lat', lat);
+            formData.append('lng', lng);
+
+            const photoInput = document.getElementById('price-photo');
+            if (photoInput.files.length > 0) {
+                formData.append('photo', photoInput.files[0]);
+            }
+
             fetch('http://localhost:3000/api/prices', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stationName,
-                    prices: submittedPrices,
-                    timestamp: new Date().toISOString(),
-                    username: username,
-                    lat: lat,
-                    lng: lng
-                })
-            }).then(response => response.json()).then(data => {
+                body: formData // <-- Use FormData, not JSON
+            })
+            .then(response => response.json())
+            .then(data => {
                 if (data.message) {
-                    showSuccessModal("Prices submitted successfully!");
+                    showSuccessModal("Prices submitted successfully! Pending admin approval.");
                     closeUpdateForm();
-                    fetchGasStations(); // Refresh markers
-
-                    // --- Fetch latest prices and update panel & history ---
-                    fetch('http://localhost:3000/api/prices')
-                        .then(res => res.json())
-                        .then(submittedPricesArr => {
-                            // Find all submissions for this station within Butuan and within 1km
-                            const name = currentStation.name;
-                            const lat = currentStation.lat;
-                            const lng = currentStation.lng;
-                            const stationSubmissions = submittedPricesArr
-                                .filter(sub =>
-                                    isInButuan(sub.lat, sub.lng) &&
-                                    sub.stationName.toLowerCase().trim() === name.toLowerCase().trim() &&
-                                    Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lng) ** 2) * 111 < 1
-                                )
-                                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-                            // Pick the latest by timestamp
-                            const latestSubmission = stationSubmissions[0];
-
-                            // Update info panel with latest data
-                            showStationDetails({
-                                name: name,
-                                brand: currentStation.brand,
-                                lat: lat,
-                                lng: lng,
-                                prices: latestSubmission ? latestSubmission.prices : currentStation.prices,
-                                submitted: latestSubmission
-                            });
-                        });
+                    fetchGasStations();
                 } else {
                     alert("Error submitting prices: " + (data.error || "Unknown error"));
                 }
-            }).catch(err => {
+            })
+            .catch(err => {
                 console.error(err);
                 alert("Network error. Please try again later.");
             });
@@ -590,8 +652,21 @@
         let username = localStorage.getItem('username');
         let currentStation = null; // Store current station data for accurate location
 
+        window.isAdmin = false;
         function checkAuth() {
             if (username) {
+                fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(username))
+                    .then(res => res.json())
+                    .then(data => {
+                        window.isAdmin = !!data.isAdmin;
+                        console.log('window.isAdmin:', window.isAdmin); // <-- Add this line
+                        showUserInfo();
+                        if (window.isAdmin) {
+                            document.getElementById('admin-approvals-btn').style.display = 'inline-block';
+                        } else {
+                            document.getElementById('admin-approvals-btn').style.display = 'none';
+                        }
+                    });
                 document.getElementById('login-modal').classList.add('hidden');
                 document.getElementById('user-info').innerText = `Hello, ${username}`;
                 document.getElementById('user-info').classList.remove('hidden');
@@ -623,6 +698,7 @@
                     username = data.username;
                     localStorage.setItem('username', username);
                     checkAuth();
+                    showUserInfo(); // <-- Show user info after login
                 } else {
                     alert(data.error);
                 }
@@ -719,6 +795,41 @@
         document.getElementById('city-search').addEventListener("keypress", (e) => { if (e.key === "Enter") handleSearch(); });
 
         checkAuth(); // Check auth on load
+
+        async function showUserInfo() {
+    if (!username) return;
+    const res = await fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(username));
+    const data = await res.json();
+    document.getElementById('user-info').innerText = `Hello, ${username} (Trust Score: ${data.score || 1})`;
+}
+
+// Call showUserInfo() after login/register/checkAuth
+
+
+
+function approveSubmission(stationName, lat, lng) {
+    fetch('http://localhost:3000/api/approve-price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
+    }).then(res => res.json()).then(result => {
+        alert(result.message || result.error);
+        showPendingApprovals();
+        fetchGasStations();
+    });
+}
+
+function rejectSubmission(stationName, lat, lng) {
+    fetch('http://localhost:3000/api/reject-price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
+    }).then(res => res.json()).then(result => {
+        alert(result.message || result.error);
+        showPendingApprovals();
+        fetchGasStations();
+    });
+}
     </script>
 </body>
 </html>

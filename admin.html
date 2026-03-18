@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FuelFinder PH | Admin Approvals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="max-w-2xl mx-auto mt-10 bg-white rounded-2xl shadow-xl p-8">
+        <h1 class="text-2xl font-black text-blue-600 mb-6">Admin Price Approvals</h1>
+        <div id="pending-list"></div>
+        <button onclick="window.location.href='index.html'" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold">Back to Main Page</button>
+    </div>
+    <script>
+        let username = localStorage.getItem('username');
+        // You may want to check admin status here as well
+
+        async function showPendingApprovals() {
+            const res = await fetch('http://localhost:3000/api/prices');
+            const allPrices = await res.json();
+            const pending = allPrices.filter(sub => !sub.approved);
+            const list = document.getElementById('pending-list');
+            if (pending.length === 0) {
+                list.innerHTML = '<p class="text-gray-500">No pending submissions.</p>';
+                return;
+            }
+            list.innerHTML = pending.map(sub => `
+                <div class="p-4 border rounded mb-4 bg-gray-50">
+                    <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
+                    <div>
+                        Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
+                        91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
+                        95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
+                    </div>
+                    ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px;"></div>` : ''}
+                    <div class="mt-2">
+                        <button onclick="approveSubmission('${sub.stationName}', ${sub.lat}, ${sub.lng})" class="bg-green-500 text-white px-3 py-1 rounded mr-2">Approve</button>
+                        <button onclick="rejectSubmission('${sub.stationName}', ${sub.lat}, ${sub.lng})" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function approveSubmission(stationName, lat, lng) {
+            fetch('http://localhost:3000/api/approve-price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
+            }).then(res => res.json()).then(result => {
+                alert(result.message || result.error);
+                showPendingApprovals();
+            });
+        }
+
+        function rejectSubmission(stationName, lat, lng) {
+            fetch('http://localhost:3000/api/reject-price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
+            }).then(res => res.json()).then(result => {
+                alert(result.message || result.error);
+                showPendingApprovals();
+            });
+        }
+
+        fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(username))
+            .then(res => res.json())
+            .then(data => {
+                if (!data.isAdmin) {
+                    alert('Admin access required.');
+                    window.location.href = 'index.html';
+                } else {
+                    showPendingApprovals();
+                }
+            });
+    </script>
+</body>
+</html>
