@@ -60,13 +60,13 @@ app.post('/api/login', async (req, res) => {
 
 // POST /api/prices - Store submitted prices
 app.post('/api/prices', (req, res) => {
-    const { stationName, prices, timestamp, username } = req.body;
-    if (!stationName || !prices || !timestamp || !username) {
+    const { stationName, prices, timestamp, username, lat, lng } = req.body;
+    if (!stationName || !prices || !timestamp || !username || lat == null || lng == null) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
     
     const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    data.push({ stationName, prices, timestamp, username, confirmScore: 0, disputeScore: 0, voters: [] });
+    data.push({ stationName, prices, timestamp, username, lat, lng, confirmScore: 0, disputeScore: 0, voters: [] });
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
     
     res.json({ message: 'Price submitted successfully' });
@@ -74,55 +74,40 @@ app.post('/api/prices', (req, res) => {
 
 // POST /api/vote - Handle confirm/dispute votes with weighted scores
 app.post('/api/vote', (req, res) => {
-    console.log('Vote request:', req.body);
-    const { stationName, type, username } = req.body;
-    if (!stationName || !['confirm', 'dispute'].includes(type) || !username) {
+    const { stationName, type, username, lat, lng } = req.body;
+    if (!stationName || !['confirm', 'dispute'].includes(type) || !username || lat == null || lng == null) {
         return res.status(400).json({ error: 'Invalid request' });
     }
     
-    let users;
-    try {
-        users = JSON.parse(fs.readFileSync(USERS_FILE));
-    } catch (e) {
-        console.error('Error parsing users file:', e);
-        return res.status(500).json({ error: 'Server error' });
-    }
-    
+    const users = JSON.parse(fs.readFileSync(USERS_FILE));
     const voterScore = users[username]?.score || 1;
     
-    let data;
-    try {
-        data = JSON.parse(fs.readFileSync(DATA_FILE));
-    } catch (e) {
-        console.error('Error parsing data file:', e);
-        return res.status(500).json({ error: 'Server error' });
-    }
-    
-    const latest = data.filter(sub => typeof sub === 'object' && sub && sub.stationName && sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-    console.log('Latest submission found:', !!latest);
-    console.log('Latest type:', typeof latest, 'Latest:', latest);
-    
-    if (latest) {
-        // Initialize missing fields for backward compatibility
-        if (typeof latest.confirmScore !== 'number') latest.confirmScore = 0;
-        if (typeof latest.disputeScore !== 'number') latest.disputeScore = 0;
-        if (!latest.voters || !Array.isArray(latest.voters)) latest.voters = [];
-        
-        console.log('Voters array:', latest.voters);
-        console.log('Username in voters:', latest.voters.includes(username));
-        
-        if (!latest.voters.includes(username)) {
-            latest.voters.push(username);
-            if (type === 'confirm') latest.confirmScore += voterScore;
-            else latest.disputeScore += voterScore;
-            
-            try {
-                fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-                res.json({ message: 'Vote recorded' });
-            } catch (e) {
-                console.error('Error writing data file:', e);
-                res.status(500).json({ error: 'Server error' });
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    // Find the closest matching submission within ~1 km
+    let closest = null;
+    let minDistance = Infinity;
+    data.forEach(sub => {
+        if (sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim()) {
+            const distance = Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lng) ** 2) * 111; // Rough km conversion
+            if (distance < 1 && distance < minDistance) { // Within 1 km
+                minDistance = distance;
+                closest = sub;
             }
+        }
+    });
+    
+    if (closest) {
+        // Initialize missing fields
+        if (typeof closest.confirmScore !== 'number') closest.confirmScore = 0;
+        if (typeof closest.disputeScore !== 'number') closest.disputeScore = 0;
+        if (!closest.voters || !Array.isArray(closest.voters)) closest.voters = [];
+        
+        if (!closest.voters.includes(username)) {
+            closest.voters.push(username);
+            if (type === 'confirm') closest.confirmScore += voterScore;
+            else closest.disputeScore += voterScore;
+            fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+            res.json({ message: 'Vote recorded' });
         } else {
             res.status(400).json({ error: 'Already voted' });
         }

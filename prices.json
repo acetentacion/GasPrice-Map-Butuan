@@ -144,5 +144,299 @@
     "voters": [
       "edgieace"
     ]
+  },
+  {
+    "stationName": "petron",
+    "prices": {
+      "diesel": 51,
+      "u91": 52,
+      "u95": 53
+    },
+    "timestamp": "2026-03-18T04:07:10.478Z",
+    "username": "edgieace",
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 53,
+      "u91": 54,
+      "u95": 55
+    },
+    "timestamp": "2026-03-18T04:09:34.306Z",
+    "username": "edgieace",
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 53,
+      "u91": 54,
+      "u95": 55
+    },
+    "timestamp": "2026-03-18T04:10:10.928Z",
+    "username": "edgieace",
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 53,
+      "u91": 54,
+      "u95": 55
+    },
+    "timestamp": "2026-03-18T04:10:28.014Z",
+    "username": "edgieace",
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 53,
+      "u91": 54,
+      "u95": 55
+    },
+    "timestamp": "2026-03-18T04:10:55.915Z",
+    "username": "edgieace",
+    "confirmScore": 1,
+    "disputeScore": 0,
+    "voters": [
+      "edgieace"
+    ]
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 51,
+      "u91": 52,
+      "u95": 53
+    },
+    "timestamp": "2026-03-18T04:12:54.484Z",
+    "username": "edgieace",
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 51,
+      "u91": 52,
+      "u95": 53
+    },
+    "timestamp": "2026-03-18T04:13:41.471Z",
+    "username": "edgieace",
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "caltex",
+    "prices": {
+      "diesel": 51,
+      "u91": 52,
+      "u95": 53
+    },
+    "timestamp": "2026-03-18T04:14:32.617Z",
+    "username": "edgieace",
+    "lat": 8.9477182,
+    "lng": 125.5413383,
+    "confirmScore": 1,
+    "disputeScore": 0,
+    "voters": [
+      "edgieace"
+    ]
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 55,
+      "u91": 55,
+      "u95": 55
+    },
+    "timestamp": "2026-03-18T04:32:32.667Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 1,
+    "voters": [
+      "edgieace"
+    ]
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 56,
+      "u91": 56,
+      "u95": 555
+    },
+    "timestamp": "2026-03-18T04:33:01.635Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 56,
+      "u91": 58,
+      "u95": 58
+    },
+    "timestamp": "2026-03-18T04:52:23.714Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 95,
+      "u91": 93,
+      "u95": 110
+    },
+    "timestamp": "2026-03-18T04:54:24.853Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 95,
+      "u91": 93,
+      "u95": 110
+    },
+    "timestamp": "2026-03-18T04:55:14.873Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 123,
+      "u91": 123,
+      "u95": 123
+    },
+    "timestamp": "2026-03-18T04:57:44.793Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 66,
+      "u91": 66,
+      "u95": 66
+    },
+    "timestamp": "2026-03-18T05:00:30.093Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 123,
+      "u91": 123,
+      "u95": 123
+    },
+    "timestamp": "2026-03-18T05:02:00.394Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 66,
+      "u91": 66,
+      "u95": 66
+    },
+    "timestamp": "2026-03-18T05:03:03.644Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 33,
+      "u91": 44,
+      "u95": 44
+    },
+    "timestamp": "2026-03-18T05:10:23.533Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 55,
+      "u91": 77,
+      "u95": 88
+    },
+    "timestamp": "2026-03-18T05:12:03.605Z",
+    "username": "edgieace",
+    "lat": 8.9470938,
+    "lng": 125.5362448,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": []
+  },
+  {
+    "stationName": "universal fuel",
+    "prices": {
+      "diesel": 52,
+      "u91": 12,
+      "u95": 33
+    },
+    "timestamp": "2026-03-18T05:12:28.213Z",
+    "username": "edgieace",
+    "lat": 8.9432158,
+    "lng": 125.5416329,
+    "confirmScore": 1,
+    "disputeScore": 0,
+    "voters": [
+      "edgieace"
+    ]
   }
 ]
