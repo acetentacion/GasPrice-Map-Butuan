@@ -1,0 +1,148 @@
+[
+  {
+    "stationName": "Caltex",
+    "prices": {
+      "diesel": 51,
+      "u91": 51,
+      "u95": 51
+    },
+    "timestamp": "2026-03-17T22:56:03.824Z"
+  },
+  {
+    "stationName": "Petro Gazz",
+    "prices": {
+      "diesel": 56,
+      "u91": 56,
+      "u95": 56
+    },
+    "timestamp": "2026-03-17T22:58:14.238Z"
+  },
+  {
+    "stationName": "Petron",
+    "prices": {
+      "diesel": 54,
+      "u91": 57,
+      "u95": 54
+    },
+    "timestamp": "2026-03-17T22:59:57.077Z"
+  },
+  {
+    "stationName": "Petron",
+    "prices": {
+      "diesel": 53,
+      "u91": 56,
+      "u95": 56
+    },
+    "timestamp": "2026-03-17T23:02:08.212Z",
+    "confirmScore": 1,
+    "disputeScore": 0,
+    "voters": [
+      "edgieace"
+    ]
+  },
+  {
+    "stationName": "Petro Gazz",
+    "prices": {
+      "diesel": 58,
+      "u91": 56,
+      "u95": 66
+    },
+    "timestamp": "2026-03-17T23:03:50.897Z"
+  },
+  {
+    "stationName": "petro gazz",
+    "prices": {
+      "diesel": 59,
+      "u91": 57,
+      "u95": 66
+    },
+    "timestamp": "2026-03-17T23:05:46.721Z",
+    "confirmScore": 1,
+    "disputeScore": 0,
+    "voters": [
+      "edgieace"
+    ]
+  },
+  {
+    "stationName": "caltex",
+    "prices": {
+      "diesel": 53,
+      "u91": 55,
+      "u95": 56
+    },
+    "timestamp": "2026-03-17T23:08:10.066Z"
+  },
+  {
+    "stationName": "caltex",
+    "prices": {
+      "diesel": 51,
+      "u91": 52,
+      "u95": 53
+    },
+    "timestamp": "2026-03-17T23:09:57.663Z"
+  },
+  {
+    "stationName": "caltex",
+    "prices": {
+      "diesel": 51,
+      "u91": 52,
+      "u95": 53
+    },
+    "timestamp": "2026-03-17T23:10:15.377Z"
+  },
+  {
+    "stationName": "caltex",
+    "prices": {
+      "diesel": 54,
+      "u91": 55,
+      "u95": 56
+    },
+    "timestamp": "2026-03-17T23:19:27.354Z"
+  },
+  {
+    "stationName": "caltex",
+    "prices": {
+      "diesel": 56,
+      "u91": 55,
+      "u95": 44
+    },
+    "timestamp": "2026-03-17T23:22:09.080Z",
+    "disputes": 3,
+    "confirms": 3,
+    "confirmScore": 0,
+    "disputeScore": 1,
+    "voters": [
+      "edgieace"
+    ]
+  },
+  {
+    "stationName": "universal fuel",
+    "prices": {
+      "diesel": 54,
+      "u91": 56,
+      "u95": 56
+    },
+    "timestamp": "2026-03-17T23:58:29.367Z",
+    "username": "edgieace",
+    "confirmScore": 1,
+    "disputeScore": 0,
+    "voters": [
+      "edgieace"
+    ]
+  },
+  {
+    "stationName": "caltex",
+    "prices": {
+      "diesel": 56,
+      "u91": 77,
+      "u95": 76
+    },
+    "timestamp": "2026-03-18T00:00:01.148Z",
+    "username": "edgieace",
+    "confirmScore": 1,
+    "disputeScore": 0,
+    "voters": [
+      "edgieace"
+    ]
+  }
+]
