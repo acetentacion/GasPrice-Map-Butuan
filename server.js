@@ -1,29 +1,57 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
+const mongoose = require('mongoose');
+const path = require('path');
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'prices.json');
-const USERS_FILE = path.join(__dirname, 'users.json');
 const upload = multer({ dest: path.join(__dirname, 'uploads/') });
+
+// MongoDB connection
+mongoose.connect('mongodb+srv://edgieace_db_user:Wildflowers-01@cluster0.w6ycdks.mongodb.net/gasprice?retryWrites=true&w=majority')
+    .then(() => {
+        console.log('MongoDB connected!');
+    })
+    .catch(err => {
+        console.error('MongoDB connection error:', err);
+    });
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(__dirname)); // Serve static files from current directory
 
-// Ensure files exist
-if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify([]));
-}
-if (!fs.existsSync(USERS_FILE)) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify({}));
-}
+// MongoDB Schemas
+const PriceSchema = new mongoose.Schema({
+    stationName: String,
+    prices: {
+        diesel: Number,
+        u91: Number,
+        u95: Number
+    },
+    timestamp: String,
+    username: String,
+    lat: Number,
+    lng: Number,
+    confirmScore: Number,
+    disputeScore: Number,
+    voters: [String],
+    approved: Boolean,
+    photoUrl: String,
+    flagged: Boolean
+});
+const Price = mongoose.model('Price', PriceSchema);
+
+const UserSchema = new mongoose.Schema({
+    username: String,
+    password: String,
+    score: Number,
+    isAdmin: Boolean
+});
+const User = mongoose.model('User', UserSchema);
 
 // POST /api/register - Register a new user
 app.post('/api/register', async (req, res) => {
@@ -31,16 +59,12 @@ app.post('/api/register', async (req, res) => {
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password required' });
     }
-    
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    if (users[username]) {
+    const existing = await User.findOne({ username });
+    if (existing) {
         return res.status(400).json({ error: 'Username already exists' });
     }
-    
     const hashedPassword = await bcrypt.hash(password, 10);
-    users[username] = { password: hashedPassword, score: 1 };
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users));
-    
+    await User.create({ username, password: hashedPassword, score: 1 });
     res.json({ message: 'Registration successful' });
 });
 
@@ -50,31 +74,26 @@ app.post('/api/login', async (req, res) => {
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password required' });
     }
-    
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    const user = users[username];
+    const user = await User.findOne({ username });
     if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
-    
     res.json({ message: 'Login successful', username });
 });
 
 // POST /api/prices - Store submitted prices
-app.post('/api/prices', upload.single('photo'), (req, res) => {
+app.post('/api/prices', upload.single('photo'), async (req, res) => {
     const { stationName, diesel, u91, u95, timestamp, username, lat, lng } = req.body;
     if (!stationName || !diesel || !u91 || !u95 || !timestamp || !username || lat == null || lng == null) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const prices = { diesel: parseFloat(diesel), u91: parseFloat(u91), u95: parseFloat(u95) };
     let photoUrl = null;
     if (req.file) {
         photoUrl = '/uploads/' + req.file.filename;
     }
-    data.push({
+    const price = new Price({
         stationName,
-        prices,
+        prices: { diesel: parseFloat(diesel), u91: parseFloat(u91), u95: parseFloat(u95) },
         timestamp,
         username,
         lat: parseFloat(lat),
@@ -85,61 +104,49 @@ app.post('/api/prices', upload.single('photo'), (req, res) => {
         approved: false,
         photoUrl
     });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    await price.save();
     res.json({ message: 'Price submitted successfully, pending admin approval.' });
 });
 
 // Serve uploaded photos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// When a price is confirmed/disputed, update the user's score
-function updateUserScore(username, delta) {
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    if (!users[username]) users[username] = { password: '', score: 1 };
-    users[username].score = (users[username].score || 1) + delta;
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-}
-
 // POST /api/vote - Handle confirm/dispute votes with weighted scores
-app.post('/api/vote', (req, res) => {
+app.post('/api/vote', async (req, res) => {
     const { stationName, type, username, lat, lng } = req.body;
     if (!stationName || !['confirm', 'dispute'].includes(type) || !username || lat == null || lng == null) {
         return res.status(400).json({ error: 'Invalid request' });
     }
-    
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    const voterScore = users[username]?.score || 1;
-    
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    const user = await User.findOne({ username });
+    const voterScore = user?.score || 1;
+
     // Find the closest matching submission within ~1 km
+    const submissions = await Price.find({ stationName: new RegExp(`^${stationName}$`, 'i') });
     let closest = null;
     let minDistance = Infinity;
-    data.forEach(sub => {
-        if (sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim()) {
-            const distance = Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lng) ** 2) * 111; // Rough km conversion
-            if (distance < 1 && distance < minDistance) { // Within 1 km
-                minDistance = distance;
-                closest = sub;
-            }
+    submissions.forEach(sub => {
+        const distance = Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lng) ** 2) * 111;
+        if (distance < 1 && distance < minDistance) {
+            minDistance = distance;
+            closest = sub;
         }
     });
-    
+
     if (closest) {
-        // Initialize missing fields
-        if (typeof closest.confirmScore !== 'number') closest.confirmScore = 0;
-        if (typeof closest.disputeScore !== 'number') closest.disputeScore = 0;
-        if (!closest.voters || !Array.isArray(closest.voters)) closest.voters = [];
-        
+        if (!closest.voters) closest.voters = [];
+        if (!closest.confirmScore) closest.confirmScore = 0;
+        if (!closest.disputeScore) closest.disputeScore = 0;
+
         if (!closest.voters.includes(username)) {
             closest.voters.push(username);
             if (type === 'confirm') {
                 closest.confirmScore += voterScore;
-                updateUserScore(closest.username, 1); // Increase score for submitter
+                await User.updateOne({ username: closest.username }, { $inc: { score: 1 } });
             } else {
                 closest.disputeScore += voterScore;
-                updateUserScore(closest.username, -1); // Decrease score for submitter
+                await User.updateOne({ username: closest.username }, { $inc: { score: -1 } });
             }
-            fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+            await closest.save();
             res.json({ message: 'Vote recorded' });
         } else {
             res.status(400).json({ error: 'Already voted' });
@@ -150,27 +157,20 @@ app.post('/api/vote', (req, res) => {
 });
 
 // POST /api/flag-price - Admin flags a price as fake/disputed
-app.post('/api/flag-price', (req, res) => {
+app.post('/api/flag-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    if (!users[adminUsername] || !users[adminUsername].isAdmin) {
+    const admin = await User.findOne({ username: adminUsername });
+    if (!admin || !admin.isAdmin) {
         return res.status(403).json({ error: 'Admin privileges required' });
     }
-
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    let flagged = false;
-    data.forEach(sub => {
-        if (
-            sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim() &&
-            Math.abs(sub.lat - lat) < 0.001 &&
-            Math.abs(sub.lng - lng) < 0.001
-        ) {
-            sub.flagged = true;
-            flagged = true;
-        }
+    const price = await Price.findOne({
+        stationName: new RegExp(`^${stationName}$`, 'i'),
+        lat: parseFloat(lat),
+        lng: parseFloat(lng)
     });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    if (flagged) {
+    if (price) {
+        price.flagged = true;
+        await price.save();
         res.json({ message: 'Price flagged as fake/disputed.' });
     } else {
         res.status(404).json({ error: 'Submission not found.' });
@@ -178,77 +178,60 @@ app.post('/api/flag-price', (req, res) => {
 });
 
 // POST /api/remove-price - Admin removes a price submission
-app.post('/api/remove-price', (req, res) => {
+app.post('/api/remove-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    if (!users[adminUsername] || !users[adminUsername].isAdmin) {
+    const admin = await User.findOne({ username: adminUsername });
+    if (!admin || !admin.isAdmin) {
         return res.status(403).json({ error: 'Admin privileges required' });
     }
-
-    let data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const initialLength = data.length;
-    data = data.filter(sub =>
-        !(
-            sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim() &&
-            Math.abs(sub.lat - lat) < 0.001 &&
-            Math.abs(sub.lng - lng) < 0.001
-        )
-    );
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    if (data.length < initialLength) {
+    const result = await Price.deleteOne({
+        stationName: new RegExp(`^${stationName}$`, 'i'),
+        lat: parseFloat(lat),
+        lng: parseFloat(lng)
+    });
+    if (result.deletedCount > 0) {
         res.json({ message: 'Price submission removed.' });
     } else {
         res.status(404).json({ error: 'Submission not found.' });
     }
 });
 
-// Approve a submission
-app.post('/api/approve-price', (req, res) => {
+// POST /api/approve-price - Approve a submission
+app.post('/api/approve-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    if (!users[adminUsername] || !users[adminUsername].isAdmin) {
+    const admin = await User.findOne({ username: adminUsername });
+    if (!admin || !admin.isAdmin) {
         return res.status(403).json({ error: 'Admin privileges required' });
     }
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    let found = false;
-    data.forEach(sub => {
-        if (
-            sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim() &&
-            Math.abs(sub.lat - lat) < 0.001 &&
-            Math.abs(sub.lng - lng) < 0.001 &&
-            !sub.approved
-        ) {
-            sub.approved = true;
-            found = true;
-        }
+    const price = await Price.findOne({
+        stationName: new RegExp(`^${stationName}$`, 'i'),
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        approved: false
     });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    if (found) {
+    if (price) {
+        price.approved = true;
+        await price.save();
         res.json({ message: 'Submission approved.' });
     } else {
         res.status(404).json({ error: 'Pending submission not found.' });
     }
 });
 
-// Reject (delete) a submission
-app.post('/api/reject-price', (req, res) => {
+// POST /api/reject-price - Reject (delete) a submission
+app.post('/api/reject-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    if (!users[adminUsername] || !users[adminUsername].isAdmin) {
+    const admin = await User.findOne({ username: adminUsername });
+    if (!admin || !admin.isAdmin) {
         return res.status(403).json({ error: 'Admin privileges required' });
     }
-    let data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const initialLength = data.length;
-    data = data.filter(sub =>
-        !(
-            sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim() &&
-            Math.abs(sub.lat - lat) < 0.001 &&
-            Math.abs(sub.lng - lng) < 0.001 &&
-            !sub.approved
-        )
-    );
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    if (data.length < initialLength) {
+    const result = await Price.deleteOne({
+        stationName: new RegExp(`^${stationName}$`, 'i'),
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+        approved: false
+    });
+    if (result.deletedCount > 0) {
         res.json({ message: 'Submission rejected and removed.' });
     } else {
         res.status(404).json({ error: 'Pending submission not found.' });
@@ -256,23 +239,22 @@ app.post('/api/reject-price', (req, res) => {
 });
 
 // GET /api/prices - Retrieve all submissions
-app.get('/api/prices', (req, res) => {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+app.get('/api/prices', async (req, res) => {
+    const data = await Price.find();
     res.json(data);
 });
 
 // GET /api/user-score - Retrieve user score
-app.get('/api/user-score', (req, res) => {
+app.get('/api/user-score', async (req, res) => {
     const username = req.query.username;
-    const users = JSON.parse(fs.readFileSync(USERS_FILE));
-    res.json({ score: users[username]?.score || 1, isAdmin: !!users[username]?.isAdmin });
+    const user = await User.findOne({ username });
+    res.json({ score: user?.score || 1, isAdmin: !!user?.isAdmin });
 });
 
 // GET /api/user-submissions - Retrieve submissions by a specific user
-app.get('/api/user-submissions', (req, res) => {
+app.get('/api/user-submissions', async (req, res) => {
     const username = req.query.username;
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const submissions = data.filter(sub => sub.username === username);
+    const submissions = await Price.find({ username });
     res.json(submissions);
 });
 

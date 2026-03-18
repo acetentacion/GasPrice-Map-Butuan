@@ -79,5 +79,22 @@
     "voters": [],
     "approved": true,
     "photoUrl": "/uploads/9fa6d8abdaf5c164eed83d093dadb7b6"
+  },
+  {
+    "stationName": "flying v",
+    "prices": {
+      "diesel": 55,
+      "u91": 56,
+      "u95": 57
+    },
+    "timestamp": "2026-03-18T14:27:15.866Z",
+    "username": "edgieace",
+    "lat": 8.9519335,
+    "lng": 125.5543185,
+    "confirmScore": 0,
+    "disputeScore": 0,
+    "voters": [],
+    "approved": true,
+    "photoUrl": "/uploads/50e7ac5bfa5f0a53387860125023c0d0"
   }
 ]
