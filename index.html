@@ -64,6 +64,7 @@
             </button>
             <!-- MOVE ADMIN BUTTON HERE -->
             <button onclick="window.location.href='admin.html'" id="admin-approvals-btn" style="display:none;" class="p-2 bg-yellow-500 text-white rounded-full font-bold">Admin Approvals</button>
+            <button onclick="showUserHistory()" id="user-history-btn" class="p-2 bg-blue-100 text-blue-700 rounded-full font-bold">My Submissions</button>
         </div>
     </header>
 
@@ -198,6 +199,14 @@
     <h4 class="font-bold mb-2">Pending Submissions</h4>
     <div id="pending-list"></div>
 </div>
+
+    <div id="user-history-modal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full">
+            <h2 class="text-xl font-bold mb-4">My Price Submissions</h2>
+            <div id="user-history-list"></div>
+            <button onclick="closeUserHistory()" class="mt-4 bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold">Close</button>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -829,6 +838,41 @@ function rejectSubmission(stationName, lat, lng) {
         showPendingApprovals();
         fetchGasStations();
     });
+}
+
+function showUserHistory() {
+    const username = localStorage.getItem('username');
+    if (!username) {
+        alert('Please log in to view your submissions.');
+        return;
+    }
+    fetch('http://localhost:3000/api/user-submissions?username=' + encodeURIComponent(username))
+        .then(res => res.json())
+        .then(submissions => {
+            const list = document.getElementById('user-history-list');
+            if (!submissions.length) {
+                list.innerHTML = '<p class="text-gray-500">No submissions found.</p>';
+                return;
+            }
+            list.innerHTML = submissions.map(sub => `
+                <div class="p-3 border rounded mb-2 bg-gray-50">
+                    <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
+                    <div>
+                        Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
+                        91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
+                        95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">Status: ${sub.approved ? '✅ Approved' : '⏳ Pending'}</div>
+                    ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:120px; border-radius:8px;"></div>` : ''}
+                    <div class="text-xs text-gray-400 mt-1">${new Date(sub.timestamp).toLocaleString()}</div>
+                </div>
+            `).join('');
+            document.getElementById('user-history-modal').classList.remove('hidden');
+        });
+}
+
+function closeUserHistory() {
+    document.getElementById('user-history-modal').classList.add('hidden');
 }
     </script>
 </body>

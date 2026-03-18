@@ -268,6 +268,14 @@ app.get('/api/user-score', (req, res) => {
     res.json({ score: users[username]?.score || 1, isAdmin: !!users[username]?.isAdmin });
 });
 
+// GET /api/user-submissions - Retrieve submissions by a specific user
+app.get('/api/user-submissions', (req, res) => {
+    const username = req.query.username;
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    const submissions = data.filter(sub => sub.username === username);
+    res.json(submissions);
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
