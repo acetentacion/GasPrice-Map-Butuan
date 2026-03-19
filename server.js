@@ -53,6 +53,14 @@ const UserSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', UserSchema);
 
+const StationSchema = new mongoose.Schema({
+    name: String,
+    lat: Number,
+    lng: Number,
+    brand: String
+});
+const Station = mongoose.model('Station', StationSchema);
+
 // POST /api/register - Register a new user
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
@@ -110,6 +118,8 @@ app.post('/api/prices', upload.single('photo'), async (req, res) => {
 
 // Serve uploaded photos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve logo folder
+app.use('/logos', express.static(path.join(__dirname, 'logos')));
 
 // POST /api/vote - Handle confirm/dispute votes with weighted scores
 app.post('/api/vote', async (req, res) => {
@@ -240,8 +250,45 @@ app.post('/api/reject-price', async (req, res) => {
 
 // GET /api/prices - Retrieve all submissions
 app.get('/api/prices', async (req, res) => {
-    const data = await Price.find();
-    res.json(data);
+    const { stationName, minPrice, maxPrice, fuelType, approved } = req.query;
+    const filter = {};
+
+    // Filter by station name (partial, case-insensitive)
+    if (stationName) {
+        filter.stationName = { $regex: stationName, $options: 'i' };
+    }
+
+    // By default, only show approved submissions unless explicitly requesting pending or all
+    if (typeof approved === 'undefined') {
+        filter.approved = true;
+    } else if (approved === 'true') {
+        filter.approved = true;
+    } else if (approved === 'false') {
+        filter.approved = false;
+    }
+
+    // Filter by price range for a specific fuel type
+    if (fuelType && (minPrice || maxPrice)) {
+        filter[`prices.${fuelType}`] = {};
+        if (minPrice) filter[`prices.${fuelType}`].$gte = parseFloat(minPrice);
+        if (maxPrice) filter[`prices.${fuelType}`].$lte = parseFloat(maxPrice);
+    }
+
+    // Get all matching submissions
+    const all = await Price.find(filter).sort({ timestamp: -1 });
+
+    // Only keep the latest per station (by name+lat+lng)
+    const unique = [];
+    const seen = new Set();
+    for (const sub of all) {
+        const key = `${sub.stationName.toLowerCase().trim()}_${sub.lat}_${sub.lng}`;
+        if (!seen.has(key)) {
+            unique.push(sub);
+            seen.add(key);
+        }
+    }
+
+    res.json(unique);
 });
 
 // GET /api/user-score - Retrieve user score
@@ -256,6 +303,67 @@ app.get('/api/user-submissions', async (req, res) => {
     const username = req.query.username;
     const submissions = await Price.find({ username });
     res.json(submissions);
+});
+
+// GET /api/station-names?query=sh
+app.get('/api/station-names', async (req, res) => {
+    const { query } = req.query;
+    if (!query) return res.json([]);
+    // Find distinct station names that match the query (case-insensitive, partial)
+    const names = await Price.distinct('stationName', { stationName: { $regex: query, $options: 'i' } });
+    // Optionally, sort and limit results
+    res.json(names.slice(0, 10));
+});
+
+// GET /api/station-suggestions?query=Sh
+app.get('/api/station-suggestions', async (req, res) => {
+    const { query } = req.query;
+    if (!query) return res.json([]);
+    const centerLat = 8.9475;
+    const centerLng = 125.5406;
+    const radiusKm = 15;
+
+    const stations = await Station.aggregate([
+        { $match: { 
+            name: { $regex: query, $options: 'i' },
+            lat: { $exists: true },
+            lng: { $exists: true }
+        }},
+        { $addFields: {
+            distance: {
+                $multiply: [
+                    { $sqrt: { $add: [
+                        { $pow: [{ $subtract: ["$lat", centerLat] }, 2] },
+                        { $pow: [{ $subtract: ["$lng", centerLng] }, 2] }
+                    ]}},
+                    111
+                ]
+            }
+        }},
+        { $match: { distance: { $lte: radiusKm } } },
+        { $limit: 10 }
+    ]);
+    res.json(stations.map(s => ({
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+        brand: s.brand
+    })));
+});
+
+// GET /api/user-rankings
+app.get('/api/user-rankings', async (req, res) => {
+    const users = await User.find({}, { username: 1, score: 1, isAdmin: 1, _id: 0 }).sort({ score: -1 });
+    // Assign badge/rank based on score
+    const ranked = users.map(u => {
+        let badge = 'Newbie';
+        if (u.score >= 100) badge = 'Legend';
+        else if (u.score >= 50) badge = 'Expert';
+        else if (u.score >= 20) badge = 'Trusted';
+        else if (u.score >= 5) badge = 'Contributor';
+        return { ...u.toObject(), badge };
+    });
+    res.json(ranked);
 });
 
 app.listen(PORT, () => {

@@ -11,43 +11,59 @@
         <div id="pending-list"></div>
         <button onclick="window.location.href='index.html'" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold">Back to Main Page</button>
     </div>
+
+    <!-- Modal for feedback -->
+    <div id="action-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-xs w-full text-center">
+            <div id="action-modal-message" class="text-lg font-bold mb-4"></div>
+            <button onclick="closeActionModal()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded font-bold">Close</button>
+        </div>
+    </div>
+
     <script>
         let username = localStorage.getItem('username');
         // You may want to check admin status here as well
 
         async function showPendingApprovals() {
-            const res = await fetch('http://localhost:3000/api/prices');
-            const allPrices = await res.json();
-            const pending = allPrices.filter(sub => !sub.approved);
+            const res = await fetch('http://localhost:3000/api/prices?approved=false');
+            const pending = await res.json();
             const list = document.getElementById('pending-list');
             if (pending.length === 0) {
                 list.innerHTML = '<p class="text-gray-500">No pending submissions.</p>';
                 return;
             }
-            list.innerHTML = pending.map(sub => `
-                <div class="p-4 border rounded mb-4 bg-gray-50">
-                    <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
-                    <div>
-                        Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
-                        91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
-                        95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
+            list.innerHTML = pending.map(sub => {
+                const safeName = sub.stationName.replace(/'/g, "\\'");
+                return `
+                    <div class="p-4 border rounded mb-4 bg-gray-50">
+                        <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
+                        <div>
+                            Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
+                            91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
+                            95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
+                        </div>
+                        ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px;"></div>` : ''}
+                        <div class="mt-2">
+                            <button onclick="approveSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-green-500 text-white px-3 py-1 rounded mr-2">Approve</button>
+                            <button onclick="rejectSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
+                        </div>
                     </div>
-                    ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px;"></div>` : ''}
-                    <div class="mt-2">
-                        <button onclick="approveSubmission('${sub.stationName}', ${sub.lat}, ${sub.lng})" class="bg-green-500 text-white px-3 py-1 rounded mr-2">Approve</button>
-                        <button onclick="rejectSubmission('${sub.stationName}', ${sub.lat}, ${sub.lng})" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function approveSubmission(stationName, lat, lng) {
             fetch('http://localhost:3000/api/approve-price', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
+                body: JSON.stringify({
+                    stationName: stationName.trim(),
+                    lat: Number(lat),
+                    lng: Number(lng),
+                    adminUsername: username
+                })
             }).then(res => res.json()).then(result => {
-                alert(result.message || result.error);
+                showActionModal(result.message || result.error);
                 showPendingApprovals();
             });
         }
@@ -56,11 +72,25 @@
             fetch('http://localhost:3000/api/reject-price', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
+                body: JSON.stringify({
+                    stationName: stationName.trim(),
+                    lat: Number(lat),
+                    lng: Number(lng),
+                    adminUsername: username
+                })
             }).then(res => res.json()).then(result => {
-                alert(result.message || result.error);
+                showActionModal(result.message || result.error);
                 showPendingApprovals();
             });
+        }
+
+        function showActionModal(message) {
+            document.getElementById('action-modal-message').innerText = message;
+            document.getElementById('action-modal').classList.remove('hidden');
+        }
+
+        function closeActionModal() {
+            document.getElementById('action-modal').classList.add('hidden');
         }
 
         fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(username))

@@ -8,872 +8,461 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
+        @media (max-width: 640px) {
+            #map { min-height: 200px; }
+        }
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #city-modal { z-index: 50; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
+        #city-modal { z-index: 50; background: rgba(0,0,0,0.8); }
         #info-panel { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
         #info-panel.active { transform: translateY(0); }
-        /* Nozzle Colors */
-        .nozzle-diesel { background-color: #1f2937; } /* Black/Dark Gray */
-        .nozzle-u91 { background-color: #16a34a; }    /* Green */
-        .nozzle-u95 { background-color: #dc2626; }    /* Red */
+        .nozzle-diesel { background-color: #1f2937; }
+        .nozzle-u91 { background-color: #16a34a; }
+        .nozzle-u95 { background-color: #dc2626; }
     </style>
 </head>
-<body class="bg-gray-100 font-sans overflow-hidden">
+<body class="bg-gray-100 font-sans">
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="hidden md:flex flex-col w-64 bg-white shadow-lg p-6 space-y-4">
+    <h1 class="text-3xl font-black text-blue-600 mb-8">FuelFinder</h1>
 
-    <div id="city-modal" class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 transform transition-all">
+    <button id="show-city-modal-btn" class="flex items-center gap-3 w-full p-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span>Select City</span>
+    </button>
+
+    <button onclick="showRankings()" class="flex items-center gap-3 w-full p-3 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+        <span>Rankings</span>
+    </button>
+
+    <button onclick="showUserProfile()" class="flex items-center gap-3 w-full p-3 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+        <span>My Profile</span>
+    </button>
+
+    <button id="admin-approvals-btn" 
+        onclick="window.location.href='admin.html'" 
+        style="display:none;" 
+        class="flex items-center gap-3 w-full p-3 text-orange-600 rounded-xl font-bold hover:bg-orange-50 transition-colors">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>Admin Approvals</span>
+</button>
+
+    <div class="mt-auto">
+        <button onclick="logout()" id="logout-btn" class="flex items-center gap-3 w-full p-3 text-red-500 rounded-xl font-bold hover:bg-red-50 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Logout</span>
+        </button>
+    </div>
+</aside>
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col">
+            <!-- Header for mobile -->
+            <header class="md:hidden flex items-center justify-between bg-white shadow-sm p-4">
+                <h1 class="text-xl font-black text-blue-600">FuelFinder PH</h1>
+                <button id="show-city-modal-btn-mobile" class="p-2 bg-blue-100 text-blue-600 rounded-full font-bold">Select City</button>
+            </header>
+            <!-- Search & Filter Bar -->
+            <div class="flex flex-wrap gap-2 p-4 bg-white shadow-sm">
+                <div class="relative flex-1 min-w-[200px]">
+                    <input id="search-station" type="text" placeholder="Search station..." class="p-3 border rounded w-full" autocomplete="off" oninput="showStationSuggestions()">
+                    <div id="station-suggestions" class="absolute bg-white border rounded shadow z-50" style="display:none; max-height:180px; overflow-y:auto; width:100%;"></div>
+                </div>
+                <!-- <select id="filter-fuel" class="p-3 border rounded min-w-[120px]">
+                    <option value="">Fuel Type</option>
+                    <option value="diesel">Diesel</option>
+                    <option value="u91">Unleaded 91</option>
+                    <option value="u95">Unleaded 95</option>
+                </select>
+                <input id="filter-min" type="number" placeholder="Min Price" class="p-3 border rounded min-w-[100px]">
+                <input id="filter-max" type="number" placeholder="Max Price" class="p-3 border rounded min-w-[100px]">
+            
+                <button onclick="applyFilters()" class="bg-blue-500 text-white px-4 py-3 rounded font-bold">Filter</button>
+            -->
+            </div>
+            <!-- Map & Panels -->
+            <div class="flex-1 flex flex-col md:flex-row">
+                <div class="flex-1 relative">
+                    <div id="map" class="h-[60vh] md:h-full w-full"></div>
+                    <div id="map-loader" class="loader absolute top-4 right-4 hidden"></div>
+                </div>
+                <!-- Info Panel -->
+                <div id="info-panel" class="w-full md:w-[400px] bg-white rounded-3xl shadow-2xl p-8 m-4 hidden flex flex-col">
+                    <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 id="station-name" class="text-2xl font-black text-gray-900 leading-none mb-1">Station Name</h2>
+                            <p id="station-brand" class="text-blue-500 font-black uppercase text-xs tracking-widest">Brand</p>
+                            <p id="station-address" class="text-gray-500 text-sm mb-2"></p>
+                        </div>
+                        <button onclick="closePanel()" class="bg-gray-100 p-2 rounded-full text-gray-400">✕</button>
+                    </div>
+                    <div id="distance-indicator" class="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19l-7-7m0 0l7-7m-7 7h16" />
+                        </svg>
+                        <div>
+                            <p class="text-xs font-black text-blue-500 uppercase tracking-widest">Distance</p>
+                            <p id="distance-value" class="text-xl font-black text-gray-900">-- km</p>
+                        </div>
+                    </div>
+                    <div id="price-list" class="space-y-3 mb-6"></div>
+                    <div id="price-history" class="mb-6 hidden">
+                        <h4 class="text-sm font-bold text-gray-700 mb-2">Price History</h4>
+                        <div id="history-list" class="space-y-2"></div>
+                    </div>
+                    <div id="verification-status" class="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <p id="status-text" class="text-sm font-bold text-gray-700">Status: Pending</p>
+                        <p id="last-update" class="text-xs text-gray-500">Updated --</p>
+                    </div>
+                    <div id="vote-buttons" class="flex gap-3 mb-6">
+                        <button onclick="vote('confirm')" class="flex-1 py-3 bg-green-100 text-green-700 rounded-2xl font-bold hover:bg-green-200">👍 Confirm</button>
+                        <button onclick="vote('dispute')" class="flex-1 py-3 bg-red-100 text-red-700 rounded-2xl font-bold hover:bg-red-200">👎 Dispute</button>
+                    </div>
+                    <button onclick="openUpdateForm()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+    <span>Update Prices</span>
+</button>
+                    <div id="admin-tools" style="display:none; margin-top:10px;">
+                        <button id="flag-btn" class="bg-yellow-500 text-white px-4 py-2 rounded mr-2">Flag as Fake</button>
+                        <button id="remove-btn" class="bg-red-600 text-white px-4 py-2 rounded">Remove Submission</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- Modals -->
+    <div id="city-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
             <h2 class="text-2xl font-black text-gray-800 mb-2">Find Fuel Prices ⛽</h2>
             <p class="text-gray-500 mb-6 text-sm font-medium">Search a city in the Philippines to begin.</p>
-            
             <div class="relative mb-6">
-                <input type="text" id="city-search" placeholder="Search city (e.g. Butuan...)" 
-                    class="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
+                <input type="text" id="city-search" placeholder="Search city (e.g. Butuan...)" class="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
                 <button onclick="handleSearch()" class="absolute right-4 top-4 text-blue-600 font-black">GO</button>
             </div>
-
             <div class="grid grid-cols-2 gap-3 mb-6">
                 <button onclick="selectCity(14.5995, 120.9842)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Manila</button>
                 <button onclick="selectCity(10.3157, 123.8854)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Cebu</button>
                 <button onclick="selectCity(7.1907, 125.4553)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Davao</button>
                 <button onclick="selectCity(8.9475, 125.5406)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm text-blue-600">Butuan</button>
             </div>
-
-            <button onclick="useGPS()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-                Use My Location
-            </button>
+            <button onclick="useGPS()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">Use My Location</button>
+        </div>
+    </div>
+    <!-- Other modals (update, confirm, success, login, register, history, rankings, profile) -->
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Login</h2>
+            <input id="login-username" type="text" placeholder="Username" class="w-full p-4 mb-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
+            <input id="login-password" type="password" placeholder="Password" class="w-full p-4 mb-6 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
+            <button onclick="login()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700">Login</button>
+            <button onclick="showRegisterModal()" class="w-full mt-4 py-4 bg-gray-100 text-blue-600 rounded-2xl font-black shadow-lg hover:bg-blue-50">Register</button>
         </div>
     </div>
 
-    <header class="h-16 p-4 bg-white shadow-sm flex justify-between items-center relative z-10">
-        <div class="flex items-center gap-3">
-            <h1 onclick="showModal()" class="text-xl font-black text-blue-600 tracking-tighter cursor-pointer">FuelFinder</h1>
-            <div id="map-loader" class="loader hidden"></div>
-        </div>
-        <div class="flex items-center gap-3">
-            <span id="user-info" class="text-sm font-bold text-gray-600 hidden"></span>
-            <button onclick="logout()" id="logout-btn" class="p-2 bg-gray-100 rounded-full text-gray-500 hidden">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-            </button>
-            <button onclick="showModal()" class="p-2 bg-gray-100 rounded-full text-gray-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-            </button>
-            <!-- MOVE ADMIN BUTTON HERE -->
-            <button onclick="window.location.href='admin.html'" id="admin-approvals-btn" style="display:none;" class="p-2 bg-yellow-500 text-white rounded-full font-bold">Admin Approvals</button>
-            <button onclick="showUserHistory()" id="user-history-btn" class="p-2 bg-blue-100 text-blue-700 rounded-full font-bold">My Submissions</button>
-        </div>
-    </header>
-
-    <div id="map"></div>
-
-    <div id="info-panel" class="fixed bottom-0 w-full z-20 bg-white rounded-t-[2.5rem] shadow-2xl p-6 hidden">
-        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
-        <div class="flex justify-between items-start mb-6">
-            <div>
-                <h2 id="station-name" class="text-2xl font-black text-gray-900 leading-none mb-1">Station Name</h2>
-                <p id="station-brand" class="text-blue-500 font-black uppercase text-[10px] tracking-[0.2em]">Brand</p>
-                <p id="station-address" class="text-gray-500 text-xs mb-2"></p>
-            </div>
-            <button onclick="closePanel()" class="bg-gray-100 p-2 rounded-full text-gray-400">✕</button>
-        </div>
-
-        <div id="distance-indicator" class="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19l-7-7m0 0l7-7m-7 7h16" />
+    <div id="success-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+        <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
             </svg>
-            <div>
-                <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest">Distance</p>
-                <p id="distance-value" class="text-xl font-black text-gray-900">-- km</p>
-            </div>
         </div>
-
-        <div id="price-list" class="space-y-3 mb-6">
-            </div>
-
-        <div id="price-history" class="mb-6" style="display: none;">
-            <h4 class="text-sm font-bold text-gray-700 mb-2">Price History</h4>
-            <div id="history-list" class="space-y-2"></div>
-        </div>
-
-        <div id="verification-status" class="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-            <p id="status-text" class="text-sm font-bold text-gray-700">Status: Pending</p>
-            <p id="last-update" class="text-xs text-gray-500">Updated --</p>
-        </div>
-
-        <div id="vote-buttons" class="flex gap-3 mb-6">
-            <button onclick="vote('confirm')" class="flex-1 py-3 bg-green-100 text-green-700 rounded-2xl font-bold hover:bg-green-200">👍 Confirm</button>
-            <button onclick="vote('dispute')" class="flex-1 py-3 bg-red-100 text-red-700 rounded-2xl font-bold hover:bg-red-200">👎 Dispute</button>
-        </div>
-
-        <button onclick="openUpdateForm()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all">
-            Update Prices
+        <h2 class="text-2xl font-black text-gray-800 mb-2">Success!</h2>
+        <p class="text-gray-500 mb-8 font-medium">Your price update has been submitted for community verification.</p>
+        <button onclick="document.getElementById('success-modal').classList.add('hidden')" 
+                class="w-full py-4 bg-green-600 text-white rounded-2xl font-black shadow-lg hover:bg-green-700 active:scale-95 transition-all">
+            Awesome
         </button>
-
-        <!-- Admin tools (hidden by default) -->
-        <div id="admin-tools" style="display:none; margin-top:10px;">
-            <button id="flag-btn" class="bg-yellow-500 text-white px-4 py-2 rounded mr-2">Flag as Fake</button>
-            <button id="remove-btn" class="bg-red-600 text-white px-4 py-2 rounded">Remove Submission</button>
-        </div>
     </div>
-
-    <div id="update-form" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl">
-            <h3 class="text-2xl font-black mb-1">Verify Prices</h3>
-            <p class="text-gray-400 text-sm mb-6">Community-led data verification.</p>
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Diesel</label>
-                    <input type="number" id="input-diesel" step="0.01" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-black text-xl">
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Unleaded 91</label>
-                    <input type="number" id="input-u91" step="0.01" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-black text-xl">
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Premium 95</label>
-                    <input type="number" id="input-u95" step="0.01" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-black text-xl">
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Upload Photo (optional)</label>
-                    <input type="file" id="price-photo" accept="image/*" class="w-full p-2 bg-gray-50 border-2 border-gray-100 rounded-xl">
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <button onclick="closeUpdateForm()" class="flex-1 py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">Cancel</button>
-                    <button onclick="submitPrices()" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg">Submit</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="confirm-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-[8px] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 transform transition-all">
-            <h3 class="text-2xl font-black mb-1">Confirm Submission</h3>
-            <p class="text-gray-400 text-sm mb-6" id="confirm-message">Are you sure you want to submit these prices?</p>
-            <div class="flex gap-3">
-                <button onclick="hideConfirmModal()" class="flex-1 py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">Cancel</button>
-                <button onclick="confirmSubmission()" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg">Confirm</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="success-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-[8px] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 transform transition-all">
-            <h3 class="text-2xl font-black mb-1">Success!</h3>
-            <p class="text-gray-400 text-sm mb-6" id="success-message">The community thanks you for the update.</p>
-            <button onclick="hideSuccessModal()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg">OK</button>
-        </div>
-    </div>
-
-    <div id="login-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-[8px] flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 transform transition-all">
-            <h3 class="text-2xl font-black mb-1">Login</h3>
-            <p class="text-gray-400 text-sm mb-6">Please log in to access FuelFinder PH.</p>
-            <div class="space-y-4">
-                <input type="text" id="login-username" placeholder="Username" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-bold">
-                <input type="password" id="login-password" placeholder="Password" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-bold">
-                <button onclick="login()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg">Login</button>
-                <button onclick="showRegisterModal()" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold">Register</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="register-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-[8px] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 transform transition-all">
-            <h3 class="text-2xl font-black mb-1">Register</h3>
-            <p class="text-gray-400 text-sm mb-6">Create an account to contribute.</p>
-            <div class="space-y-4">
-                <input type="text" id="register-username" placeholder="Username" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-bold">
-                <input type="password" id="register-password" placeholder="Password" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-bold">
-                <input type="password" id="register-confirm" placeholder="Confirm Password" class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-bold">
-                <button onclick="register()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg">Register</button>
-                <button onclick="showLoginModal()" class="w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold">Back to Login</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="pending-approvals" style="display:none; margin-top:10px;">
-    <h4 class="font-bold mb-2">Pending Submissions</h4>
-    <div id="pending-list"></div>
 </div>
 
-    <div id="user-history-modal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center hidden z-50">
-        <div class="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full">
-            <h2 class="text-xl font-bold mb-4">My Price Submissions</h2>
-            <div id="user-history-list"></div>
-            <button onclick="closeUserHistory()" class="mt-4 bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold">Close</button>
+    <!-- User Rankings Modal -->
+    <div id="user-rankings-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
+            <h2 class="text-2xl font-black text-gray-800 mb-2">User Rankings</h2>
+            <div id="user-rankings-list" class="mt-4 space-y-2"></div>
+            <button onclick="closeRankings()" class="w-full mt-6 py-4 bg-gray-100 text-blue-600 rounded-2xl font-black shadow-lg hover:bg-blue-50">Close</button>
         </div>
     </div>
+
+    <!-- User Profile Modal -->
+    <div id="user-profile-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 max-h-[90vh] flex flex-col">
+        
+        <h2 class="text-2xl font-black text-gray-800 mb-2">My Profile</h2>
+        <div id="user-profile-info" class="mb-4"></div>
+        <h3 class="text-lg font-bold text-gray-700 mb-2">Submission History</h3>
+        
+        <div id="user-profile-history" class="space-y-2 overflow-y-auto flex-1 pr-2">
+            </div>
+        
+        <button onclick="closeUserProfile()" class="w-full mt-6 py-4 bg-gray-100 text-blue-600 rounded-2xl font-black shadow-lg hover:bg-blue-50">Close</button>
+    </div>
+</div>
+
+<div id="update-form" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
+        <h2 class="text-2xl font-black text-gray-800 mb-2">Update Fuel Prices</h2>
+        <p class="text-gray-500 mb-6 text-sm font-medium">Help the community by providing accurate prices and a photo for verification.</p>
+        
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="col-span-2">
+                    <label class="block text-xs font-black text-gray-400 uppercase mb-1">Diesel</label>
+                    <input id="new-diesel" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-gray-400 uppercase mb-1">Unleaded 91</label>
+                    <input id="new-u91" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="block text-xs font-black text-gray-400 uppercase mb-1">Unleaded 95</label>
+                    <input id="new-u95" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-xs font-black text-gray-400 uppercase mb-2">Upload Proof (Required)</label>
+                <div class="relative border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center hover:border-blue-400 transition-colors">
+                    <input type="file" id="price-photo" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewImage(event)">
+                    <div id="photo-placeholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="text-sm text-gray-500 font-bold">Tap to take or upload photo</span>
+                    </div>
+                    <img id="image-preview" class="hidden w-full h-32 object-cover rounded-xl" />
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-8">
+            <button onclick="document.getElementById('update-form').classList.add('hidden')" class="flex-1 py-3 bg-gray-100 text-gray-500 rounded-2xl font-bold">Cancel</button>
+            <button onclick="submitPrices()" class="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all">Submit</button>
+        </div>
+    </div>
+</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const map = L.map('map', { zoomControl: false }).setView([12.8797, 121.7740], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
-        const markerGroup = L.layerGroup().addTo(map);
+        // Initialize Leaflet map and expose globally
+        window.map = L.map('map').setView([8.9475, 125.5406], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(window.map);
+        // Initialize markerGroup and add to map
+        window.markerGroup = L.layerGroup().addTo(window.map);
+    </script>
+    <script type="module" src="./mapFunctions.js"></script>
+    <script type="module" src="./markerFunctions.js"></script>
+    <script type="module" src="./utilFunctions.js"></script>
+    <script type="module" src="./stationDetails.js"></script>
+    <script type="module">
+    // --- 1. Imports ---
+    import { login, register, showRegisterModal, showLoginModal } from './authFunctions.js';
+    import { selectCity, handleSearch, useGPS, fetchGasStations } from './mapFunctions.js';
+    import { renderMarkers } from './markerFunctions.js';
+    import { showRankings, closeRankings, showUserProfile, closeUserProfile } from './userUIHandlers.js';
+    import { calculateDistance, getTimeAgo, isInButuan } from './utilFunctions.js';
+    import { showStationDetails, submitPrices, vote } from './stationDetails.js';
 
-        // --- 1. Navigation & Search ---
-        async function handleSearch() {
-            const query = document.getElementById('city-search').value;
-            if (!query) return;
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}, Philippines`);
-            const data = await res.json();
-            if (data.length > 0) selectCity(parseFloat(data[0].lat), parseFloat(data[0].lon));
-            else alert("Location not found in PH.");
+    // --- 2. Expose Functions to Window (Global Scope) ---
+    window.login = login;
+    window.register = register;
+    window.showRegisterModal = showRegisterModal;
+    window.showLoginModal = showLoginModal;
+    window.selectCity = selectCity;
+    window.handleSearch = handleSearch;
+    window.useGPS = useGPS;
+    window.fetchGasStations = fetchGasStations;
+    window.renderMarkers = renderMarkers;
+    window.showRankings = showRankings;
+    window.closeRankings = closeRankings;
+    window.showUserProfile = showUserProfile;
+    window.closeUserProfile = closeUserProfile;
+    window.calculateDistance = calculateDistance;
+    window.getTimeAgo = getTimeAgo;
+    window.isInButuan = isInButuan;
+    window.showStationDetails = showStationDetails;
+    window.submitPrices = submitPrices;
+    window.vote = vote;
+
+    // --- 3. UI Helpers ---
+    window.focusStationOnMap = function(name, lat, lng) {
+        document.getElementById('search-station').value = name;
+        if (window.map && lat && lng) {
+            window.map.setView([lat, lng], 16, { animate: true });
         }
+        showStationSuggestions();
+    };
 
-        function selectCity(lat, lng) {
-            // Only allow Butuan City selection
-            if (lat !== 8.9475 || lng !== 125.5406) {
-                alert("Only Butuan City is supported at this time.");
-                return;
-            }
-            hideModal();
-            map.flyTo([lat, lng], 15, { duration: 1.5 });
-        }
-
-        function useGPS() {
-            hideModal();
-            map.locate({setView: true, maxZoom: 15});
-        }
-
-        function showModal() { document.getElementById('city-modal').classList.remove('hidden'); }
-        function hideModal() { document.getElementById('city-modal').classList.add('hidden'); }
-
-       async function fetchGasStations(force = false) {
-    const loader = document.getElementById('map-loader');
-    
-    // ADJUSTMENT: Allow markers to persist at higher zoom levels (city/street level)
-    // Most gas stations are only visible in OSM at zoom 12-14+
-    const currentZoom = map.getZoom();
-    if (currentZoom < 10) {
-        console.log('Zoom too low to fetch new stations');
-        return; 
-    }
-    
-    const b = map.getBounds();
-    // Cache key includes zoom to ensure we get appropriate density
-    const cacheKey = `gasStations_${currentZoom}_${b.getSouth().toFixed(2)}_${b.getWest().toFixed(2)}`;
-    const cached = localStorage.getItem(cacheKey);
-    const now = Date.now();
-    
-    if (cached && !force) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (now - timestamp < 3 * 86400000) { // 3 days
-            await renderMarkers(data);
+    window.showStationSuggestions = function() {
+        const input = document.getElementById('search-station').value.trim();
+        const suggestionsBox = document.getElementById('station-suggestions');
+        if (!input) {
+            suggestionsBox.style.display = 'none';
+            suggestionsBox.innerHTML = '';
             return;
         }
-    }
-    
-    loader.classList.remove('hidden');
-    // Overpass query remains the same
-    const query = `[out:json][timeout:25];(node["amenity"="fuel"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});way["amenity"="fuel"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}););out center;`;
-    
-    try {
-        const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(query)});
-        const data = await res.json();
-        localStorage.setItem(cacheKey, JSON.stringify({ data: data.elements, timestamp: now }));
-        await renderMarkers(data.elements);
-    } catch (err) {
-        console.error('OSM fetch failed:', err);
-    } finally {
-        loader.classList.add('hidden');
-    }
-}
-
-        async function renderMarkers(stations) {
-    markerGroup.clearLayers();
-
-    // Fetch submitted prices from backend
-    let submittedPrices = [];
-    try {
-        const res = await fetch('http://localhost:3000/api/prices');
-        submittedPrices = await res.json();
-    } catch (err) {
-        console.error('Failed to fetch submitted prices:', err);
-    }
-
-    stations.forEach(s => {
-        const lat = s.lat || s.center?.lat;
-        const lon = s.lon || s.center?.lon;
-        if (!lat || !lon) return;
-        if (!isInButuan(lat, lon)) return;
-
-        const name = s.tags.name || "Gas Station";
-        const brand = s.tags.brand || s.tags.operator || "Independent";
-        // Extract address details
-        const address = [
-            s.tags['addr:street'] || '',
-            s.tags['addr:city'] || '',
-            s.tags['addr:postcode'] || ''
-        ].filter(Boolean).join(', ');
-
-        let closestSubmission = null;
-        let minDistance = Infinity;
-
-        submittedPrices.forEach(sub => {
-            if (isInButuan(sub.lat, sub.lng) && sub.stationName.toLowerCase().trim() === name.toLowerCase().trim()) {
-                const distance = Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111;
-                if (distance < 1 && distance < minDistance) {
-                    minDistance = distance;
-                    closestSubmission = sub;
+        fetch(`http://localhost:3000/api/station-suggestions?query=${encodeURIComponent(input)}`)
+            .then(res => res.json())
+            .then(stations => {
+                if (stations.length === 0) {
+                    suggestionsBox.style.display = 'none';
+                    return;
                 }
-            }
-        });
-
-        // Find all submissions for this station within Butuan and within 1km
-        const stationSubmissions = submittedPrices
-            .filter(sub =>
-                isInButuan(sub.lat, sub.lng) &&
-                sub.stationName.toLowerCase().trim() === name.toLowerCase().trim() &&
-                Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111 < 1 &&
-                sub.approved === true // <-- Only approved
-            )
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-        // Pick the latest by timestamp
-        const latestSubmission = stationSubmissions
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-
-        const prices = latestSubmission ? latestSubmission.prices : {
-            diesel: 54.10 + Math.random() * 3,
-            u91: 58.50 + Math.random() * 3,
-            u95: 61.20 + Math.random() * 3
-        };
-
-        const marker = L.marker([lat, lon]).addTo(markerGroup);
-        marker.on('click', () => {
-            showStationDetails({
-                name: name,
-                brand: brand,
-                lat: lat,
-                lng: lon,
-                address: address,
-                prices: prices,
-                submitted: latestSubmission
-            });
-        });
-    });
-
-    // Fallback to mock data if no stations are found in Butuan
-    if (stations.filter(s => isInButuan(s.lat || s.center?.lat, s.lon || s.center?.lon)).length === 0) {
-        console.log('No stations found in Butuan, using mock data');
-        const mockStations = [
-            { lat: 8.9475, lon: 125.5406, tags: { name: 'Petron Butuan', brand: 'Petron' } },
-            { lat: 8.9500, lon: 125.5350, tags: { name: 'Shell Butuan', brand: 'Shell' } },
-            { lat: 8.9450, lon: 125.5450, tags: { name: 'Caltex Butuan', brand: 'Caltex' } }
-        ];
-        
-        mockStations.forEach(s => {
-            const prices = { 
-                diesel: 54.10 + Math.random() * 3, 
-                u91: 58.50 + Math.random() * 3, 
-                u95: 61.20 + Math.random() * 3 
-            };
-            const marker = L.marker([s.lat, s.lon]).addTo(markerGroup);
-            marker.on('click', () => {
-                showStationDetails({
-                    name: s.tags.name,
-                    brand: s.tags.brand,
-                    lat: s.lat,
-                    lng: s.lon,
-                    prices: prices,
-                    submitted: null
-                });
-            });
-        });
-    }
-}
-
-        // --- Helper: Calculate Distance (Haversine Formula) ---
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth's radius in km
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return (R * c).toFixed(2);
-        }
-
-        // --- 3. UI Interaction ---
-        function showStationDetails(data) {
-            currentStation = data;
-            document.getElementById('station-name').innerText = data.name;
-            document.getElementById('station-brand').innerText = data.brand;
-            document.getElementById('station-address').innerText = data.address || 'Address not available';
-
-            // Calculate and display distance
-            const userLat = map.getCenter().lat;
-            const userLng = map.getCenter().lng;
-            const distance = calculateDistance(userLat, userLng, data.lat, data.lng);
-            document.getElementById('distance-value').innerText = `${distance} km`;
-            
-            const fuels = [
-                { label: 'Diesel', price: data.prices.diesel, color: 'nozzle-diesel' },
-                { label: 'Unleaded 91', price: data.prices.u91, color: 'nozzle-u91' },
-                { label: 'Premium 95', price: data.prices.u95, color: 'nozzle-u95' }
-            ];
-
-            document.getElementById('price-list').innerHTML = fuels.map(f => `
-                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-1.5 h-10 ${f.color} rounded-full"></div>
-                        <span class="font-black text-gray-700 text-sm tracking-tight">${f.label}</span>
+                suggestionsBox.innerHTML = stations.map(station => `
+                    <div class="p-2 cursor-pointer hover:bg-blue-50" onclick="window.focusStationOnMap('${station.name}', ${station.lat}, ${station.lng});">
+                        <div class='font-bold'>${station.name} <span class='text-xs text-gray-400'>${station.brand || ''}</span></div>
+                        <div class='text-xs text-gray-500'>${station.address || ''}</div>
                     </div>
-                    <span class="text-2xl font-black text-gray-900">₱${f.price.toFixed(2)}</span>
-                </div>
-            `).join('');
-
-            // Fetch submitted prices for history
-            fetch('http://localhost:3000/api/prices')
-                .then(res => res.json())
-                .then(submittedPrices => {
-                    const name = data.name;
-                    const lat = data.lat;
-                    const lon = data.lng;
-                    // Find all submissions for this station within Butuan and within 1km
-                    const stationSubmissions = submittedPrices
-                        .filter(sub =>
-                            isInButuan(sub.lat, sub.lng) &&
-                            sub.stationName.toLowerCase().trim() === name.toLowerCase().trim() &&
-                            Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111 < 1
-                        )
-                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-                    // Show price history (excluding the latest)
-                    if (stationSubmissions.length > 1) {
-                        document.getElementById('history-list').innerHTML = stationSubmissions.slice(1, 4).map(h => `
-                            <div class="p-3 bg-gray-50 rounded-xl">
-                                <p class="text-xs text-gray-500 mb-1">
-                                    ${getTimeAgo(new Date(h.timestamp))}
-                                    ${h.flagged ? '<span class="text-red-600 font-bold ml-2">⚠️ Flagged as Fake</span>' : ''}
-                                </p>
-                                <p class="text-sm font-bold">
-                                    Diesel: ₱${h.prices.diesel.toFixed(2)} | 91: ₱${h.prices.u91.toFixed(2)} | 95: ₱${h.prices.u95.toFixed(2)}
-                                </p>
-                            </div>
-                        `).join('');
-                        document.getElementById('price-history').style.display = 'block';
-                    } else {
-                        document.getElementById('price-history').style.display = 'none';
-                    }
-                });
-
-
-            // Display verification status
-            const statusText = document.getElementById('status-text');
-            const lastUpdate = document.getElementById('last-update');
-            const voteButtons = document.getElementById('vote-buttons');
-            if (data.submitted) {
-                const { confirmScore, disputeScore, timestamp } = data.submitted;
-                const score = confirmScore - disputeScore;
-                let status = 'Pending';
-                if (score >= 5) status = `Verified (trust score: ${score})`;
-                else if (disputeScore > confirmScore) status = `Flagged (trust score: ${score})`;
-                else status = `Pending (trust score: ${score})`;
-                statusText.innerText = `Status: ${status}`;
-                const timeAgo = getTimeAgo(new Date(timestamp));
-                lastUpdate.innerText = `Updated ${timeAgo}`;
-                voteButtons.style.display = 'flex';
-
-                // --- NEW: Show submitter's trust score ---
-                if (data.submitted && data.submitted.username) {
-                    fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(data.submitted.username))
-                        .then(res => res.json())
-                        .then(userData => {
-                            document.getElementById('status-text').innerText += ` | Submitter Trust Score: ${userData.score || 1}`;
-                        });
-                }
-
-                // --- ADDED: Show flagged status ---
-                if (data.submitted && data.submitted.flagged) {
-                    document.getElementById('status-text').innerText += ' | ⚠️ Flagged as Fake by Admin';
-                }
-            } else {
-                statusText.innerText = 'Status: No data';
-                lastUpdate.innerText = 'Updated --';
-                voteButtons.style.display = 'none';
-            }
-
-            // Show admin tools if user is admin
-            if (window.isAdmin) {
-                document.getElementById('admin-tools').style.display = 'block';
-                document.getElementById('flag-btn').onclick = () => {
-                    fetch('http://localhost:3000/api/flag-price', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            stationName: data.name,
-                            lat: data.lat,
-                            lng: data.lng,
-                            adminUsername: username
-                        })
-                    }).then(res => res.json()).then(result => {
-                        alert(result.message || result.error);
-                        fetchGasStations();
-                    });
-                };
-                document.getElementById('remove-btn').onclick = () => {
-                    fetch('http://localhost:3000/api/remove-price', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            stationName: data.name,
-                            lat: data.lat,
-                            lng: data.lng,
-                            adminUsername: username
-                        })
-                    }).then(res => res.json()).then(result => {
-                        alert(result.message || result.error);
-                        fetchGasStations();
-                    });
-                };
-            } else {
-                document.getElementById('admin-tools').style.display = 'none';
-            }
-
-            if (data.submitted && data.submitted.photoUrl) {
-                document.getElementById('station-address').innerHTML += `<br><img src="${data.submitted.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px; margin-top:8px;">`;
-            }
-
-            const panel = document.getElementById('info-panel');
-            panel.classList.remove('hidden');
-            setTimeout(() => panel.classList.add('active'), 10);
-        }
-
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diff = now - date;
-            const minutes = Math.floor(diff / 60000);
-            const hours = Math.floor(diff / 3600000);
-            const days = Math.floor(diff / 86400000);
-            if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-            if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-            if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-            return 'just now';
-        }
-
-        // submitPrices - Include location
-        function submitPrices() {
-            if (!username) {
-                alert('Please log in to submit prices.');
-                return;
-            }
-            const diesel = parseFloat(document.getElementById('input-diesel').value);
-            const u91 = parseFloat(document.getElementById('input-u91').value);
-            const u95 = parseFloat(document.getElementById('input-u95').value);
-
-            if (isNaN(diesel) || isNaN(u91) || isNaN(u95)) {
-                alert('Please enter valid prices.');
-                return;
-            }
-
-            const stationName = document.getElementById('station-name').innerText.toLowerCase().trim();
-            const lat = currentStation ? currentStation.lat : map.getCenter().lat;
-            const lng = currentStation ? currentStation.lng : map.getCenter().lng;
-
-            const formData = new FormData();
-            formData.append('stationName', stationName);
-            formData.append('diesel', diesel);
-            formData.append('u91', u91);
-            formData.append('u95', u95);
-            formData.append('timestamp', new Date().toISOString());
-            formData.append('username', username);
-            formData.append('lat', lat);
-            formData.append('lng', lng);
-
-            const photoInput = document.getElementById('price-photo');
-            if (photoInput.files.length > 0) {
-                formData.append('photo', photoInput.files[0]);
-            }
-
-            fetch('http://localhost:3000/api/prices', {
-                method: 'POST',
-                body: formData // <-- Use FormData, not JSON
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    showSuccessModal("Prices submitted successfully! Pending admin approval.");
-                    closeUpdateForm();
-                    fetchGasStations();
-                } else {
-                    alert("Error submitting prices: " + (data.error || "Unknown error"));
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                alert("Network error. Please try again later.");
+                `).join('');
+                suggestionsBox.style.display = 'block';
             });
-        }
+    };
 
-        function closePanel() {
-            const panel = document.getElementById('info-panel');
-            panel.classList.remove('active');
-            setTimeout(() => panel.classList.add('hidden'), 400);
-        }
-        function vote(type) {
-            if (!username) {
-                alert('Please log in to vote.');
-                return;
-            }
-            const stationName = document.getElementById('station-name').innerText.toLowerCase().trim();
-            const lat = currentStation ? currentStation.lat : map.getCenter().lat;
-            const lng = currentStation ? currentStation.lng : map.getCenter().lng;
-            
-            fetch('http://localhost:3000/api/vote', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ stationName, type, username, lat, lng })
-            }).then(response => {
-                console.log('Response status:', response.status);
-                if (response.ok) {
-                    console.log('Vote success');
-                    closePanel(); // Close the panel so user can re-click marker to see updated status
-                    fetchGasStations(); // Use cache to avoid 429 errors
-                    showSuccessModal("Vote recorded!");
-                } else {
-                    console.log('Vote error status:', response.status);
-                    response.json().then(data => {
-                        console.log('Error data:', data);
-                        if (data.error === 'Already voted') {
-                            alert('You have already voted on this submission.');
-                        } else {
-                            alert(data.error || "Error recording vote.");
-                        }
-                    }).catch(() => {
-                        alert("Error recording vote.");
-                    });
-                }
-            }).catch(err => {
-                console.log('Catch error:', err);
-                alert("Network error.");
-            });
-        }
-
-        // --- 4. Initialization ---
-        let fetchTimer = null;
-        let submitCallback = null;
-        let username = localStorage.getItem('username');
-        let currentStation = null; // Store current station data for accurate location
-
-        window.isAdmin = false;
-        function checkAuth() {
-            if (username) {
-                fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(username))
-                    .then(res => res.json())
-                    .then(data => {
-                        window.isAdmin = !!data.isAdmin;
-                        console.log('window.isAdmin:', window.isAdmin); // <-- Add this line
-                        showUserInfo();
-                        if (window.isAdmin) {
-                            document.getElementById('admin-approvals-btn').style.display = 'inline-block';
-                        } else {
-                            document.getElementById('admin-approvals-btn').style.display = 'none';
-                        }
-                    });
-                document.getElementById('login-modal').classList.add('hidden');
-                document.getElementById('user-info').innerText = `Hello, ${username}`;
-                document.getElementById('user-info').classList.remove('hidden');
-                document.getElementById('logout-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('login-modal').classList.remove('hidden');
-            }
-        }
-
-        function showRegisterModal() {
-            document.getElementById('login-modal').classList.add('hidden');
-            document.getElementById('register-modal').classList.remove('hidden');
-        }
-
-        function showLoginModal() {
-            document.getElementById('register-modal').classList.add('hidden');
-            document.getElementById('login-modal').classList.remove('hidden');
-        }
-
-        function login() {
-            const usernameInput = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            fetch('http://localhost:3000/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: usernameInput, password })
-            }).then(response => response.json()).then(data => {
-                if (data.username) {
-                    username = data.username;
-                    localStorage.setItem('username', username);
-                    checkAuth();
-                    showUserInfo(); // <-- Show user info after login
-                } else {
-                    alert(data.error);
-                }
-            });
-        }
-
-        function register() {
-            const usernameInput = document.getElementById('register-username').value;
-            const password = document.getElementById('register-password').value;
-            const confirm = document.getElementById('register-confirm').value;
-            if (password !== confirm) {
-                alert('Passwords do not match');
-                return;
-            }
-            fetch('http://localhost:3000/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: usernameInput, password })
-            }).then(response => response.json()).then(data => {
-                if (data.message) {
-                    alert('Registration successful! Please log in.');
-                    showLoginModal();
-                } else {
-                    alert(data.error);
-                }
-            });
-        }
-
-        function logout() {
-            username = null;
-            localStorage.removeItem('username');
-            checkAuth();
-        }
-
-        function showConfirmModal(callback) {
-            submitCallback = callback;
-            document.getElementById('confirm-message').innerText = "Are you sure you want to submit these prices for " + document.getElementById('station-name').innerText + "?";
-            document.getElementById('confirm-modal').classList.remove('hidden');
-        }
-
-        function hideConfirmModal() {
-            document.getElementById('confirm-modal').classList.add('hidden');
-            submitCallback = null;
-        }
-
-        function confirmSubmission() {
-            console.log('Confirm button clicked');
-            if (submitCallback) {
-                const cb = submitCallback;
-                submitCallback = null;
-                cb();
-            }
-            hideConfirmModal();
-        }
-
-        function showSuccessModal(message) {
-            document.getElementById('success-message').innerText = message;
-            document.getElementById('success-modal').classList.remove('hidden');
-        }
-
-        function hideSuccessModal() {
-            document.getElementById('success-modal').classList.add('hidden');
-        }
-
-        function openUpdateForm() {
-            document.getElementById('update-form').classList.remove('hidden');
-        }
-
-        function closeUpdateForm() {
-            document.getElementById('update-form').classList.add('hidden');
-        }
-
-        function isInButuan(lat, lng) {
-    // Butuan bounding box
-    return (
-        lat >= 8.9300 && lat <= 8.9900 &&
-        lng >= 125.5200 && lng <= 125.5700
-    );
-}
-
-        map.on('dragend zoomend', () => {
-    clearTimeout(fetchTimer);
-    const center = map.getCenter();
-    if (
-        center.lat >= 8.9300 && center.lat <= 8.9900 &&
-        center.lng >= 125.5200 && center.lng <= 125.5700
-    ) {
-        fetchTimer = setTimeout(() => fetchGasStations(), 500);
-    }
-});
-
-        // Initial load
-        fetchGasStations();
-        document.getElementById('city-search').addEventListener("keypress", (e) => { if (e.key === "Enter") handleSearch(); });
-
-        checkAuth(); // Check auth on load
-
-        async function showUserInfo() {
-    if (!username) return;
-    const res = await fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(username));
-    const data = await res.json();
-    document.getElementById('user-info').innerText = `Hello, ${username} (Trust Score: ${data.score || 1})`;
-}
-
-// Call showUserInfo() after login/register/checkAuth
-
-
-
-function approveSubmission(stationName, lat, lng) {
-    fetch('http://localhost:3000/api/approve-price', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
-    }).then(res => res.json()).then(result => {
-        alert(result.message || result.error);
-        showPendingApprovals();
-        fetchGasStations();
-    });
-}
-
-function rejectSubmission(stationName, lat, lng) {
-    fetch('http://localhost:3000/api/reject-price', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stationName, lat, lng, adminUsername: username })
-    }).then(res => res.json()).then(result => {
-        alert(result.message || result.error);
-        showPendingApprovals();
-        fetchGasStations();
-    });
-}
-
-function showUserHistory() {
+    function updateAdminUI() {
+    // Pull from localStorage instead of the DOM to avoid 'null' errors
     const username = localStorage.getItem('username');
+    
     if (!username) {
-        alert('Please log in to view your submissions.');
+        // If no user is logged in, ensure admin tools stay hidden
+        const adminTools = document.getElementById('admin-tools');
+        const adminBtn = document.getElementById('admin-approvals-btn');
+        if (adminTools) adminTools.style.display = 'none';
+        if (adminBtn) adminBtn.style.display = 'none';
         return;
     }
-    fetch('http://localhost:3000/api/user-submissions?username=' + encodeURIComponent(username))
+
+    fetch(`http://localhost:3000/api/user-score?username=${encodeURIComponent(username)}`)
         .then(res => res.json())
-        .then(submissions => {
-            const list = document.getElementById('user-history-list');
-            if (!submissions.length) {
-                list.innerHTML = '<p class="text-gray-500">No submissions found.</p>';
-                return;
+        .then(({ isAdmin }) => {
+            // Set global flag so stationDetails.js knows the user is an admin
+            window.isAdmin = isAdmin; 
+
+            const adminTools = document.getElementById('admin-tools');
+            const adminBtn = document.getElementById('admin-approvals-btn');
+            
+            if (isAdmin) {
+                if (adminTools) adminTools.style.display = 'flex';
+                if (adminBtn) adminBtn.style.display = 'flex';
+            } else {
+                if (adminTools) adminTools.style.display = 'none';
+                if (adminBtn) adminBtn.style.display = 'none';
             }
-            list.innerHTML = submissions.map(sub => `
-                <div class="p-3 border rounded mb-2 bg-gray-50">
-                    <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
-                    <div>
-                        Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
-                        91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
-                        95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
-                    </div>
-                    <div class="text-xs text-gray-500 mt-1">Status: ${sub.approved ? '✅ Approved' : '⏳ Pending'}</div>
-                    ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:120px; border-radius:8px;"></div>` : ''}
-                    <div class="text-xs text-gray-400 mt-1">${new Date(sub.timestamp).toLocaleString()}</div>
-                </div>
-            `).join('');
-            document.getElementById('user-history-modal').classList.remove('hidden');
-        });
+        })
+        .catch(err => console.error("Admin check failed:", err));
 }
 
-function closeUserHistory() {
-    document.getElementById('user-history-modal').classList.add('hidden');
-}
-    </script>
+// Ensure it's available globally and runs on load
+window.updateAdminUI = updateAdminUI;
+
+    function showCityModal() {
+        document.getElementById('city-modal').style.display = 'flex';
+            }
+    window.showCityModal = showCityModal;
+    document.getElementById('show-city-modal-btn').onclick = showCityModal;
+
+    window.logout = function() {
+        localStorage.removeItem('username');
+        const userEl = document.getElementById('user-info');
+        if(userEl) userEl.innerText = '';
+        document.getElementById('logout-btn').classList.add('hidden');
+        document.getElementById('login-modal').style.display = 'flex';
+        updateAdminUI();
+    };
+
+    window.showCityModal = () => document.getElementById('city-modal').style.display = 'flex';
+    window.openUpdateForm = () => document.getElementById('update-form').classList.remove('hidden');
+    
+    window.closePanel = function() {
+        const panel = document.getElementById('info-panel');
+        panel.classList.remove('active');
+        setTimeout(() => panel.classList.add('hidden'), 300);
+    };
+
+    window.previewImage = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById('image-preview');
+            const placeholder = document.getElementById('photo-placeholder');
+            if (preview) { preview.src = e.target.result; preview.classList.remove('hidden'); }
+            if (placeholder) placeholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.updateAdminUI = function() {
+        const username = localStorage.getItem('username') || 'Guest';
+        fetch(`http://localhost:3000/api/user-score?username=${encodeURIComponent(username)}`)
+            .then(res => res.json())
+            .then(({ isAdmin }) => {
+                const adminTools = document.getElementById('admin-tools');
+                const btn = document.getElementById('admin-approvals-btn');
+                if (adminTools) adminTools.style.display = isAdmin ? '' : 'none';
+                if (btn) btn.style.display = isAdmin ? 'flex' : 'none';
+                
+                
+            })
+            .catch(() => {});
+    };
+
+    // --- 4. Initialization ---
+    window.brandLogos = {
+        'shell': '/logos/shell.png',
+        'petron': '/logos/petron.png',
+        'caltex': '/logos/caltex.png',
+        'flyingv': '/logos/flyingv.png',
+        'jetti': '/logos/jetti.png',
+        'default': '/logos/default.png'
+    };
+
+    
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const username = localStorage.getItem('username');
+        if (username) {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('logout-btn').classList.remove('hidden');
+        }
+
+        const cityLat = localStorage.getItem('cityLat');
+        const cityLng = localStorage.getItem('cityLng');
+        if (cityLat && cityLng) {
+            document.getElementById('city-modal').style.display = 'none';
+            selectCity(parseFloat(cityLat), parseFloat(cityLng));
+        } else {
+            document.getElementById('city-modal').style.display = 'flex';
+        }
+        
+        updateAdminUI();
+        fetchGasStations();
+
+    
+        
+    });
+
+    
+    
+</script>
 </body>
 </html>
