@@ -39,7 +39,14 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
         </svg>
-        <span>Rankings</span>
+        <span>User Rankings</span>
+    </button>
+
+    <button onclick="showStationRankings()" class="flex items-center gap-3 w-full p-3 text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span>Station Rankings</span>
     </button>
 
     <button onclick="showUserProfile()" class="flex items-center gap-3 w-full p-3 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors">
@@ -201,6 +208,31 @@
         </div>
     </div>
 
+    <!-- Station Rankings Modal -->
+    <div id="station-rankings-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Station Rankings</h2>
+            <p class="text-gray-500 mb-4 text-sm">Stations with the lowest prices</p>
+            
+            <!-- Fuel Type Selector -->
+            <div class="flex gap-2 mb-6">
+                <button onclick="loadStationRankings('diesel')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-colors" data-fuel="diesel">Diesel</button>
+                <button onclick="loadStationRankings('u91')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-green-500 hover:text-green-600 transition-colors" data-fuel="u91">Unleaded 91</button>
+                <button onclick="loadStationRankings('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Unleaded 95</button>
+            </div>
+            
+            <!-- Current Selection Indicator -->
+            <div id="current-fuel-display" class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                <span class="text-sm font-bold text-blue-600 uppercase tracking-widest">Current: Diesel</span>
+            </div>
+            
+            <!-- Rankings List -->
+            <div id="station-rankings-list" class="space-y-3"></div>
+            
+            <button onclick="closeStationRankings()" class="w-full mt-6 py-4 bg-gray-100 text-blue-600 rounded-2xl font-black shadow-lg hover:bg-blue-50">Close</button>
+        </div>
+    </div>
+
     <!-- User Profile Modal -->
     <div id="user-profile-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
     <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 max-h-[90vh] flex flex-col">
@@ -279,7 +311,7 @@
     import { login, register, showRegisterModal, showLoginModal } from './authFunctions.js';
     import { selectCity, handleSearch, useGPS, fetchGasStations } from './mapFunctions.js';
     import { renderMarkers } from './markerFunctions.js';
-    import { showRankings, closeRankings, showUserProfile, closeUserProfile } from './userUIHandlers.js';
+    import { showRankings, closeRankings, showUserProfile, closeUserProfile, showStationRankings, closeStationRankings } from './userUIHandlers.js';
     import { calculateDistance, getTimeAgo, isInButuan } from './utilFunctions.js';
     import { showStationDetails, submitPrices, vote } from './stationDetails.js';
 
@@ -303,6 +335,116 @@
     window.showStationDetails = showStationDetails;
     window.submitPrices = submitPrices;
     window.vote = vote;
+    
+    // Station Rankings functions
+    window.showStationRankings = showStationRankings;
+    window.closeStationRankings = closeStationRankings;
+    
+    // Load station rankings function (defined in userUIHandlers.js but needs global access)
+    window.loadStationRankings = function(fuelType) {
+        const display = document.getElementById('current-fuel-display');
+        const list = document.getElementById('station-rankings-list');
+        
+        // Update current selection display
+        const fuelNames = {
+            'diesel': 'Diesel',
+            'u91': 'Unleaded 91', 
+            'u95': 'Unleaded 95'
+        };
+        
+        if (display) {
+            display.innerHTML = `<span class="text-sm font-bold text-blue-600 uppercase tracking-widest">Current: ${fuelNames[fuelType] || fuelType}</span>`;
+        }
+        
+        // Update button styles
+        document.querySelectorAll('.fuel-btn').forEach(btn => {
+            const isActive = btn.getAttribute('data-fuel') === fuelType;
+            btn.style.borderColor = isActive ? '#3b82f6' : '#e5e7eb';
+            btn.style.color = isActive ? '#2563eb' : '#6b7280';
+            btn.style.backgroundColor = isActive ? '#eff6ff' : 'transparent';
+        });
+        
+        // Show loading state
+        if (list) {
+            list.innerHTML = '<div class="flex justify-center p-4"><div class="loader"></div></div>';
+        }
+        
+        fetch(`http://localhost:3000/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=20`)
+            .then(res => res.json())
+            .then(data => {
+                if (list && data.rankings) {
+                    list.innerHTML = data.rankings.map((station, index) => {
+                        const brandLogo = window.getBrandLogo(station.brand);
+                        const priceColor = window.getPriceColor(fuelType);
+                        
+                        return `
+                            <div class="bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer station-rank-item"
+                                 onclick="focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng})">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                            ${brandLogo}
+                                        </div>
+                                        <div>
+                                            <h3 class="font-black text-gray-800 text-lg">${station.stationName}</h3>
+                                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">${station.brand}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Rank</div>
+                                        <div class="w-8 h-8 ${priceColor} text-white rounded-full flex items-center justify-center font-black text-sm">
+                                            #${index + 1}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-4 text-sm">
+                                        <span class="text-gray-600">📍 ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)}</span>
+                                        <span class="text-gray-600">👤 ${station.username}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Price</div>
+                                        <div class="text-2xl font-black ${priceColor}">₱${station.price.toFixed(2)}</div>
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between text-xs text-gray-400">
+                                    <span>Updated ${window.getTimeAgo(new Date(station.timestamp))}</span>
+                                    <span class="px-2 py-1 bg-gray-100 rounded-full">Total Stations: ${data.totalStations}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            })
+            .catch(err => {
+                console.error('Error loading station rankings:', err);
+                if (list) {
+                    list.innerHTML = '<p class="text-red-500 text-center p-4">Error loading rankings. Please try again.</p>';
+                }
+            });
+    };
+    
+    // Helper functions for station rankings
+    window.getBrandLogo = function(brand) {
+        const brandKey = (brand || '').toLowerCase();
+        const logoMap = {
+            'shell': '⛽',
+            'petron': '⛽',
+            'caltex': '⛽',
+            'flyingv': '⛽',
+            'jetti': '⛽'
+        };
+        return logoMap[brandKey] || '⛽';
+    };
+
+    window.getPriceColor = function(fuelType) {
+        const colorMap = {
+            'diesel': 'text-blue-600',
+            'u91': 'text-green-600',
+            'u95': 'text-red-600'
+        };
+        return colorMap[fuelType] || 'text-gray-600';
+    };
 
     // --- 3. UI Helpers ---
     window.focusStationOnMap = function(name, lat, lng) {

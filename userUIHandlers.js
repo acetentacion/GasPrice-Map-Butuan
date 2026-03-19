@@ -34,11 +34,128 @@ function showRankings() {
 }).join('');
             });
         });
-        // Optionally fetch and render rankings here
 }
 
 function closeRankings() {
     document.getElementById('user-rankings-modal').classList.add('hidden');
+}
+
+// UI handler for Station Rankings modal
+export function showStationRankings() {
+    document.getElementById('station-rankings-modal').classList.remove('hidden');
+    // Load default rankings for diesel
+    loadStationRankings('diesel');
+}
+
+export function closeStationRankings() {
+    document.getElementById('station-rankings-modal').classList.add('hidden');
+}
+
+// Load station rankings for a specific fuel type
+function loadStationRankings(fuelType) {
+    const display = document.getElementById('current-fuel-display');
+    const list = document.getElementById('station-rankings-list');
+    
+    // Update current selection display
+    const fuelNames = {
+        'diesel': 'Diesel',
+        'u91': 'Unleaded 91', 
+        'u95': 'Unleaded 95'
+    };
+    
+    if (display) {
+        display.innerHTML = `<span class="text-sm font-bold text-blue-600 uppercase tracking-widest">Current: ${fuelNames[fuelType] || fuelType}</span>`;
+    }
+    
+    // Update button styles
+    document.querySelectorAll('.fuel-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-fuel') === fuelType;
+        btn.style.borderColor = isActive ? '#3b82f6' : '#e5e7eb';
+        btn.style.color = isActive ? '#2563eb' : '#6b7280';
+        btn.style.backgroundColor = isActive ? '#eff6ff' : 'transparent';
+    });
+    
+    // Show loading state
+    if (list) {
+        list.innerHTML = '<div class="flex justify-center p-4"><div class="loader"></div></div>';
+    }
+    
+    fetch(`http://localhost:3000/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=20`)
+        .then(res => res.json())
+        .then(data => {
+            if (list && data.rankings) {
+                list.innerHTML = data.rankings.map((station, index) => {
+                    const brandLogo = getBrandLogo(station.brand);
+                    const priceColor = getPriceColor(fuelType);
+                    
+                    return `
+                        <div class="bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer station-rank-item"
+                             onclick="focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng})">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                        ${brandLogo}
+                                    </div>
+                                    <div>
+                                        <h3 class="font-black text-gray-800 text-lg">${station.stationName}</h3>
+                                        <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">${station.brand}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Rank</div>
+                                    <div class="w-8 h-8 ${priceColor} text-white rounded-full flex items-center justify-center font-black text-sm">
+                                        #${index + 1}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 text-sm">
+                                    <span class="text-gray-600">📍 ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)}</span>
+                                    <span class="text-gray-600">👤 ${station.username}</span>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Price</div>
+                                    <div class="text-2xl font-black ${priceColor}">₱${station.price.toFixed(2)}</div>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex items-center justify-between text-xs text-gray-400">
+                                <span>Updated ${getTimeAgo(new Date(station.timestamp))}</span>
+                                <span class="px-2 py-1 bg-gray-100 rounded-full">Total Stations: ${data.totalStations}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        })
+        .catch(err => {
+            console.error('Error loading station rankings:', err);
+            if (list) {
+                list.innerHTML = '<p class="text-red-500 text-center p-4">Error loading rankings. Please try again.</p>';
+            }
+        });
+}
+
+// Helper function to get brand logo HTML
+function getBrandLogo(brand) {
+    const brandKey = (brand || '').toLowerCase();
+    const logoMap = {
+        'shell': '⛽',
+        'petron': '⛽',
+        'caltex': '⛽',
+        'flyingv': '⛽',
+        'jetti': '⛽'
+    };
+    return logoMap[brandKey] || '⛽';
+}
+
+// Helper function to get price color based on fuel type
+function getPriceColor(fuelType) {
+    const colorMap = {
+        'diesel': 'text-blue-600',
+        'u91': 'text-green-600',
+        'u95': 'text-red-600'
+    };
+    return colorMap[fuelType] || 'text-gray-600';
 }
 
 // Badge and rank rendering helpers

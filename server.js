@@ -366,6 +366,54 @@ app.get('/api/user-rankings', async (req, res) => {
     res.json(ranked);
 });
 
+// GET /api/station-rankings - Get stations ranked by lowest prices
+app.get('/api/station-rankings', async (req, res) => {
+    const { fuelType = 'diesel', limit = 10 } = req.query;
+    
+    try {
+        // Get all approved submissions
+        const submissions = await Price.find({ approved: true })
+            .sort({ timestamp: -1 });
+        
+        // Group by station name and get the latest submission for each station
+        const stationMap = new Map();
+        submissions.forEach(sub => {
+            const key = sub.stationName.toLowerCase().trim();
+            if (!stationMap.has(key) || new Date(sub.timestamp) > new Date(stationMap.get(key).timestamp)) {
+                stationMap.set(key, sub);
+            }
+        });
+        
+        // Convert to array and filter out stations without the requested fuel type
+        const stations = Array.from(stationMap.values())
+            .filter(sub => sub.prices && typeof sub.prices[fuelType] === 'number')
+            .map(sub => ({
+                stationName: sub.stationName,
+                brand: sub.brand || 'Unknown',
+                prices: sub.prices,
+                lat: sub.lat,
+                lng: sub.lng,
+                price: sub.prices[fuelType],
+                timestamp: sub.timestamp,
+                username: sub.username
+            }));
+        
+        // Sort by price (lowest first) and limit results
+        const rankedStations = stations
+            .sort((a, b) => a.price - b.price)
+            .slice(0, parseInt(limit));
+        
+        res.json({
+            fuelType,
+            rankings: rankedStations,
+            totalStations: stations.length
+        });
+    } catch (error) {
+        console.error('Error fetching station rankings:', error);
+        res.status(500).json({ error: 'Failed to fetch station rankings' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
