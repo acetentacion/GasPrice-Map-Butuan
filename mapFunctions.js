@@ -147,10 +147,47 @@ async function fetchGasStations(force = false) {
     } else {
         // Index page logic - fetch from OpenStreetMap and enrich with API data
         try {
-            // Fetch from OpenStreetMap
+            // First, try to fetch from OpenStreetMap with a timeout
             const query = `[out:json][timeout:25];\n(node[\"amenity\"=\"fuel\"](8.78833,125.37694,9.10833,125.69694);\n way[\"amenity\"=\"fuel\"](8.78833,125.37694,9.10833,125.69694););\nout center;`;
-            const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(query)});
-            const osmData = await res.json();
+            
+            // Create a timeout promise
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('OSM API timeout')), 10000); // 10 second timeout
+            });
+            
+            // Try to fetch OSM data with timeout
+            let osmData;
+            try {
+                const res = await Promise.race([
+                    fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(query)}),
+                    timeoutPromise
+                ]);
+                osmData = await res.json();
+            } catch (timeoutErr) {
+                console.warn('OSM API timeout, using cached data or mock stations:', timeoutErr);
+                // Try to use cached data first
+                const cachedStations = localStorage.getItem('index_stations_cache');
+                if (cachedStations) {
+                    try {
+                        const cached = JSON.parse(cachedStations);
+                        const cacheAge = Date.now() - cached.timestamp;
+                        // Use cache if less than 1 hour old
+                        if (cacheAge < 3600000) {
+                            console.log('Using cached station data');
+                            return cached.stations;
+                        }
+                    } catch (e) {
+                        console.warn('Invalid cached data:', e);
+                    }
+                }
+                // Fall back to mock data
+                console.log('Using mock stations due to OSM API issues');
+                return [
+                    { stationName: 'Petron Butuan', brand: 'Petron', lat: 8.9475, lng: 125.5406, prices: { diesel: null, u91: null, u95: null } },
+                    { stationName: 'Shell Butuan', brand: 'Shell', lat: 8.9500, lng: 125.5350, prices: { diesel: null, u91: null, u95: null } },
+                    { stationName: 'Caltex Butuan', brand: 'Caltex', lat: 8.9450, lng: 125.5450, prices: { diesel: null, u91: null, u95: null } }
+                ];
+            }
             
             // Fetch price data from our API
             let submittedPrices = [];
@@ -222,6 +259,12 @@ async function fetchGasStations(force = false) {
                 });
             });
             
+            // Cache the results for future use
+            localStorage.setItem('index_stations_cache', JSON.stringify({
+                stations: stations,
+                timestamp: Date.now()
+            }));
+            
             // If no OSM data found, use mock data like the original renderMarkers
             if (stations.length === 0) {
                 console.log('No stations found in Butuan, using mock data');
@@ -236,7 +279,23 @@ async function fetchGasStations(force = false) {
             return stations;
         } catch (error) {
             console.error('Error fetching gas stations:', error);
-            return [];
+            // Try to use cached data as final fallback
+            const cachedStations = localStorage.getItem('index_stations_cache');
+            if (cachedStations) {
+                try {
+                    const cached = JSON.parse(cachedStations);
+                    console.log('Using cached station data as final fallback');
+                    return cached.stations;
+                } catch (e) {
+                    console.warn('Invalid cached data:', e);
+                }
+            }
+            // Final fallback to mock data
+            return [
+                { stationName: 'Petron Butuan', brand: 'Petron', lat: 8.9475, lng: 125.5406, prices: { diesel: null, u91: null, u95: null } },
+                { stationName: 'Shell Butuan', brand: 'Shell', lat: 8.9500, lng: 125.5350, prices: { diesel: null, u91: null, u95: null } },
+                { stationName: 'Caltex Butuan', brand: 'Caltex', lat: 8.9450, lng: 125.5450, prices: { diesel: null, u91: null, u95: null } }
+            ];
         }
     }
 }
