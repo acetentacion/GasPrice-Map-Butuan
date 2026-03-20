@@ -586,6 +586,8 @@ window.updateAdminUI = updateAdminUI;
                 userEl.innerText = username;
                 userEl.classList.remove('hidden');
             }
+            // Show the "My Profile" button when user is logged in
+            document.getElementById('profile-btn').style.display = 'flex';
         } else {
             // Ensure user-info is hidden if no username
             const userEl = document.getElementById('user-info');
@@ -595,6 +597,8 @@ window.updateAdminUI = updateAdminUI;
             }
             // Show login button when not logged in
             document.getElementById('login-btn').style.display = 'flex';
+            // Hide the "My Profile" button when user is not logged in
+            document.getElementById('profile-btn').style.display = 'none';
         }
 
         const cityLat = localStorage.getItem('cityLat');
