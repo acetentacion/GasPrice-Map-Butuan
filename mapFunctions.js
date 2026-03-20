@@ -144,9 +144,9 @@ async function fetchGasStations(force = false) {
             loader.classList.add('hidden');
         }
     } else {
-        // For station-focused page, just fetch from our API
+        // For station-focused page, fetch from our API using /api/prices endpoint
         try {
-            const response = await fetch(`${config.API_BASE_URL}/api/gas-stations`);
+            const response = await fetch(`${config.API_BASE_URL}/api/prices?approved=true`);
             const stations = await response.json();
             return stations;
         } catch (error) {
