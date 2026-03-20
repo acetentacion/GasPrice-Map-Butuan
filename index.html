@@ -641,7 +641,11 @@
         if (currentFilter !== 'all') {
             filteredStations = filteredStations.filter(station => {
                 console.log('Filtering station:', station.stationName, 'prices:', station.prices, 'currentFilter:', currentFilter);
-                return station.prices && station.prices[currentFilter] !== undefined;
+                // Check if prices object exists and has the requested fuel type with a valid number
+                return station.prices && 
+                       station.prices.hasOwnProperty(currentFilter) && 
+                       typeof station.prices[currentFilter] === 'number' && 
+                       !isNaN(station.prices[currentFilter]);
             });
         }
 
@@ -910,8 +914,20 @@
         });
         
         fetchGasStations().then(stations => {
+            console.log('Fetched stations:', stations);
             allStations = stations;
             renderStationList();
+        }).catch(error => {
+            console.error('Error fetching stations:', error);
+            // Show error message to user
+            const list = document.getElementById('station-list');
+            const count = document.getElementById('station-count');
+            if (list) {
+                list.innerHTML = '<p class="text-red-500 text-center py-8">Error loading stations. Please check your internet connection.</p>';
+            }
+            if (count) {
+                count.innerText = 'Error loading';
+            }
         });
     });
 </script>
