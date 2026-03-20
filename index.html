@@ -679,9 +679,13 @@
                 station.prices?.u91 || Infinity,
                 station.prices?.u95 || Infinity
             );
-            const distance = currentCityLat && currentCityLng 
-                ? (calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng) || '--').toFixed(2)
-                : '--';
+            let distance = '--';
+            if (currentCityLat && currentCityLng) {
+                const dist = calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng);
+                if (dist !== undefined && dist !== null) {
+                    distance = dist.toFixed(2);
+                }
+            }
 
             return `
                 <div class="bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer station-item"
