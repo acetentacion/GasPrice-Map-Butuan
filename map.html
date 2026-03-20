@@ -17,6 +17,40 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
+        
+        /* Styling for stations without price data */
+        .no-price-station {
+            border-color: #f3f4f6;
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            position: relative;
+        }
+        
+        .no-price-station::after {
+            content: 'No Price Data';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 12px;
+            transform: rotate(5deg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .no-price-station:hover {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+        }
+        
+        .no-price-station .w-10 {
+            border: 2px solid #ef4444;
+            background: #fee2e2;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -619,6 +653,40 @@
         if (loginRequiredModal) {
             loginRequiredModal.classList.add('hidden');
         }
+    };
+
+    // Function to show informational message for stations without price data
+    window.showNoPriceDataMessage = function(stationName, brand) {
+        // Create a temporary toast-style notification
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 left-4 right-4 bg-white border-2 border-red-200 text-red-800 p-4 rounded-xl shadow-lg z-50 max-w-md mx-auto';
+        toast.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-lg mb-1">No Price Data Available</h3>
+                    <p class="text-sm text-gray-600 mb-3">This station (${stationName}) currently has no fuel price information. Help the community by submitting accurate prices.</p>
+                    <div class="flex gap-2">
+                        <button onclick="this.closest('.fixed').remove()" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-200 transition-colors">Close</button>
+                        <button onclick="window.location.href='map.html?lat=${window.currentCityLat || 8.9475}&lng=${window.currentCityLng || 125.5406}&name=${encodeURIComponent(stationName)}'; this.closest('.fixed').remove();" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">View on Map</button>
+                    </div>
+                </div>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 8 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 8000);
     };
 
     // --- 4. Initialization ---
