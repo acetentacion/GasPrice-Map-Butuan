@@ -165,6 +165,12 @@
                         </svg>
                         <span class="text-xs font-bold">Location</span>
                     </button>
+                    <button onclick="showLoginModal()" class="flex flex-col items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors" id="login-nav-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        <span class="text-xs font-bold">Login</span>
+                    </button>
                 </div>
             </nav>
             
@@ -618,6 +624,9 @@ window.updateAdminUI = updateAdminUI;
         // Also hide profile button in mobile navigation
         const profileNavBtn = document.getElementById('profile-nav-btn');
         if (profileNavBtn) profileNavBtn.style.display = 'none';
+        // Show mobile login button when logging out
+        const loginNavBtn = document.getElementById('login-nav-btn');
+        if (loginNavBtn) loginNavBtn.style.display = 'flex';
         updateAdminUI();
     };
 
@@ -714,6 +723,9 @@ window.updateAdminUI = updateAdminUI;
             }
             // Show the "My Profile" button when user is logged in
             document.getElementById('profile-btn').style.display = 'flex';
+            // Hide mobile login button when user is logged in
+            const loginNavBtn = document.getElementById('login-nav-btn');
+            if (loginNavBtn) loginNavBtn.style.display = 'none';
         } else {
             // Ensure user-info is hidden if no username
             const userEl = document.getElementById('user-info');
@@ -723,6 +735,9 @@ window.updateAdminUI = updateAdminUI;
             }
             // Show login button when not logged in
             document.getElementById('login-btn').style.display = 'flex';
+            // Show mobile login button when not logged in
+            const loginNavBtn = document.getElementById('login-nav-btn');
+            if (loginNavBtn) loginNavBtn.style.display = 'flex';
             // Hide the "My Profile" button when user is not logged in
             document.getElementById('profile-btn').style.display = 'none';
         }
