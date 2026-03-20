@@ -19,6 +19,26 @@
         .nozzle-diesel { background-color: #1f2937; }
         .nozzle-u91 { background-color: #16a34a; }
         .nozzle-u95 { background-color: #dc2626; }
+        
+        /* Mobile touch improvements */
+        .leaflet-marker-icon {
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* Ensure proper touch handling on mobile */
+        @media (max-width: 768px) {
+            #info-panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 60vh;
+                border-radius: 24px 24px 0 0;
+                box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -308,6 +328,15 @@
         }).addTo(window.map);
         // Initialize markerGroup and add to map
         window.markerGroup = L.layerGroup().addTo(window.map);
+        
+        // Mobile touch event enhancement
+        // Add touch event support to the map container to prevent conflicts
+        document.getElementById('map').addEventListener('touchstart', function(e) {
+            // Allow touch events to pass through to markers
+            if (e.target.closest('.leaflet-marker-icon')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     </script>
     <script type="module" src="./mapFunctions.js"></script>
     <script type="module" src="./markerFunctions.js"></script>

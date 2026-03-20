@@ -57,7 +57,8 @@ async function renderMarkers(stations) {
             popupAnchor: [0, -32]
         });
         const marker = L.marker([lat, lon], { icon }).addTo(markerGroup);
-        marker.on('click', () => {
+        // Add both click and touch event handlers for mobile compatibility
+        marker.on('click touchstart', () => {
             showStationDetails({
                 name: name,
                 brand: brand,
@@ -83,7 +84,8 @@ async function renderMarkers(stations) {
                 u95: 61.20 + Math.random() * 3 
             };
             const marker = L.marker([s.lat, s.lon]).addTo(markerGroup);
-            marker.on('click', () => {
+            // Add both click and touch event handlers for mobile compatibility
+            marker.on('click touchstart', () => {
                 showStationDetails({
                     name: s.tags.name,
                     brand: s.tags.brand,
@@ -110,7 +112,8 @@ function renderMarkersFromBackend(prices) {
             popupAnchor: [0, -32]
         });
         const marker = L.marker([sub.lat, sub.lng], { icon }).addTo(markerGroup);
-        marker.on('click', () => {
+        // Add both click and touch event handlers for mobile compatibility
+        marker.on('click touchstart', () => {
             showStationDetails({
                 name: sub.stationName,
                 brand: sub.brand,
