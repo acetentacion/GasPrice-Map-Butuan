@@ -1,6 +1,6 @@
 # Netlify Configuration for FuelFinder PH
 [build]
-  command = "npm start"
+  command = "echo 'Static site build - no build command needed'"
   publish = "."
 
 [build.environment]
@@ -19,18 +19,20 @@
   status = 200
 
 # Headers for security and performance
-[headers]
-  "/*" = [
-    { name = "X-Frame-Options", value = "DENY" },
-    { name = "X-XSS-Protection", value = "1; mode=block" },
-    { name = "X-Content-Type-Options", value = "nosniff" },
-    { name = "Referrer-Policy", value = "strict-origin-when-cross-origin" }
-  ]
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
 
-  "/uploads/*" = [
-    { name = "Cache-Control", value = "public, max-age=31536000" }
-  ]
+[[headers]]
+  for = "/uploads/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
 
-  "/logos/*" = [
-    { name = "Cache-Control", value = "public, max-age=31536000" }
-  ]
+[[headers]]
+  for = "/logos/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
