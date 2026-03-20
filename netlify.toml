@@ -12,11 +12,6 @@
   to = "/index.html"
   status = 200
 
-# API proxy for development (optional)
-[[redirects]]
-  from = "/api/*"
-  to = "http://localhost:3000/api/:splat"
-  status = 200
 
 # Headers for security and performance
 [[headers]]

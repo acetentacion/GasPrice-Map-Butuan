@@ -121,4 +121,33 @@ async function fetchGasStations(force = false) {
     }
 }
 
+// Global functions for station rankings
+window.focusStationOnMap = function(stationName, lat, lng) {
+    // Fly to the station location
+    map.flyTo([lat, lng], 15, { duration: 1.5 });
+    
+    // Try to find and open the marker for this station
+    markerGroup.eachLayer(function(layer) {
+        if (layer.getLatLng().lat === lat && layer.getLatLng().lng === lng) {
+            layer.openPopup();
+        }
+    });
+};
+
+window.closeStationRankings = function() {
+    const modal = document.getElementById('station-rankings-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.getDirections = function(lat, lng, stationName) {
+    // Create a Google Maps directions URL
+    const currentLocation = map.getCenter();
+    const googleMapsUrl = `https://www.google.com/maps/dir/${currentLocation.lat},${currentLocation.lng}/${lat},${lng}/data=!3m1!4b1!4m2!4m1!3e0`;
+    
+    // Open in new tab
+    window.open(googleMapsUrl, '_blank');
+};
+
 export { handleSearch, selectCity, useGPS, showModal, hideModal, fetchGasStations };

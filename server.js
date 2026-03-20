@@ -20,7 +20,26 @@ mongoose.connect('mongodb+srv://edgieace_db_user:Wildflowers-01@cluster0.w6ycdks
     });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            'http://localhost:3000',
+            'http://localhost:5500',
+            'http://127.0.0.1:5500',
+            'https://gasfinderbxu.netlify.app',
+            'https://gasfinderbxu.onrender.com'
+        ];
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+}));
 app.use(bodyParser.json());
 app.use(express.static(__dirname)); // Serve static files from current directory
 
