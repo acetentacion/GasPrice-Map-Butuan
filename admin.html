@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>FuelFinder PH | Admin Approvals</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="./config.js"></script>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="max-w-2xl mx-auto mt-10 bg-white rounded-2xl shadow-xl p-8">
@@ -25,7 +26,7 @@
         // You may want to check admin status here as well
 
         async function showPendingApprovals() {
-            const res = await fetch('http://localhost:3000/api/prices?approved=false');
+            const res = await fetch(`${config.API_BASE_URL}/api/prices?approved=false`);
             const pending = await res.json();
             const list = document.getElementById('pending-list');
             if (pending.length === 0) {
@@ -53,7 +54,7 @@
         }
 
         function approveSubmission(stationName, lat, lng) {
-            fetch('http://localhost:3000/api/approve-price', {
+            fetch(`${config.API_BASE_URL}/api/approve-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -69,7 +70,7 @@
         }
 
         function rejectSubmission(stationName, lat, lng) {
-            fetch('http://localhost:3000/api/reject-price', {
+            fetch(`${config.API_BASE_URL}/api/reject-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -93,7 +94,7 @@
             document.getElementById('action-modal').classList.add('hidden');
         }
 
-        fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(username))
+        fetch(`${config.API_BASE_URL}/api/user-score?username=` + encodeURIComponent(username))
             .then(res => res.json())
             .then(data => {
                 if (!data.isAdmin) {

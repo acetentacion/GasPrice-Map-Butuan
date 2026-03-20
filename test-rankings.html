@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test Station Rankings</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="./config.js"></script>
 </head>
 <body class="bg-gray-100 p-8">
     <div class="max-w-4xl mx-auto">
@@ -99,7 +100,7 @@
             }
             
             try {
-                const response = await fetch(`http://localhost:3000/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=10`);
+                const response = await fetch(`${config.API_BASE_URL}/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=10`);
                 const data = await response.json();
                 
                 testOutput.innerHTML = `<p class="text-green-600">✓ API call successful! Got ${data.rankings ? data.rankings.length : 0} stations</p>`;

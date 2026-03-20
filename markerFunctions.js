@@ -5,7 +5,7 @@ async function renderMarkers(stations) {
     markerGroup.clearLayers();
     let submittedPrices = [];
     try {
-        const res = await fetch('http://localhost:3000/api/prices');
+        const res = await fetch(`${config.API_BASE_URL}/api/prices`);
         submittedPrices = await res.json();
     } catch (err) {
         console.error('Failed to fetch submitted prices:', err);

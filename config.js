@@ -5,7 +5,7 @@ const config = {
     // API base URL - will be replaced by environment variables in production
     API_BASE_URL: (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
         ? 'http://localhost:3000' 
-        : 'https://gasfinderbxu.onrender.com'
+        : 'https://gasprice-map-backend.onrender.com'
 };
 
 // Override with environment variable if available (for Netlify)
@@ -14,10 +14,8 @@ if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     const envBaseUrl = window.location.origin.replace('netlify.app', 'onrender.com');
     config.API_BASE_URL = envBaseUrl;
     
-    // Since the backend is not deployed on Render, always use localhost for now
-    // This is a temporary solution until the backend is properly deployed
-    console.warn('Using localhost backend as Render deployment is not available');
-    config.API_BASE_URL = 'http://localhost:3000';
+    // Use the Render backend URL for production
+    config.API_BASE_URL = 'https://gasprice-map-backend.onrender.com';
 }
 
 // Export for use in frontend
