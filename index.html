@@ -286,7 +286,7 @@
         </div>
         <h2 class="text-2xl font-black text-gray-800 mb-2">Success!</h2>
         <p class="text-gray-500 mb-8 font-medium">Your price update has been submitted for community verification.</p>
-        <button onclick="document.getElementById('success-modal').classList.add('hidden')" 
+        <button onclick="closeSuccessModal()" 
                 class="w-full py-4 bg-green-600 text-white rounded-2xl font-black shadow-lg hover:bg-green-700 active:scale-95 transition-all">
             Awesome
         </button>
@@ -299,6 +299,63 @@
             <h2 class="text-2xl font-black text-gray-800 mb-2">User Rankings</h2>
             <div id="user-rankings-list" class="mt-4 space-y-2"></div>
             <button onclick="closeRankings()" class="w-full mt-6 py-4 bg-gray-100 text-blue-600 rounded-2xl font-black shadow-lg hover:bg-blue-50">Close</button>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Error</h2>
+            <p id="error-message" class="text-gray-500 mb-8 font-medium">An error occurred.</p>
+            <button onclick="closeErrorModal()" 
+                    class="w-full py-4 bg-red-600 text-white rounded-2xl font-black shadow-lg hover:bg-red-700 active:scale-95 transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Network Error Modal -->
+    <div id="network-error-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Network Error</h2>
+            <p class="text-gray-500 mb-8 font-medium">Please check your internet connection and try again.</p>
+            <button onclick="closeNetworkErrorModal()" 
+                    class="w-full py-4 bg-orange-600 text-white rounded-2xl font-black shadow-lg hover:bg-orange-700 active:scale-95 transition-all">
+                Try Again
+            </button>
+        </div>
+    </div>
+
+    <!-- Login Required Modal -->
+    <div id="login-required-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Login Required</h2>
+            <p class="text-gray-500 mb-8 font-medium">Please log in to access this feature.</p>
+            <div class="flex gap-3">
+                <button onclick="closeLoginRequiredModal()" 
+                        class="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black shadow-lg hover:bg-gray-200">
+                    Cancel
+                </button>
+                <button onclick="showLoginModal()" 
+                        class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700">
+                    Login
+                </button>
+            </div>
         </div>
     </div>
 
@@ -735,6 +792,9 @@ window.updateAdminUI = updateAdminUI;
             // Hide mobile login button when user is logged in
             const loginNavBtn = document.getElementById('login-nav-btn');
             if (loginNavBtn) loginNavBtn.style.display = 'none';
+            // Show mobile logout button when user is logged in
+            const logoutNavBtn = document.getElementById('logout-nav-btn');
+            if (logoutNavBtn) logoutNavBtn.style.display = 'flex';
         } else {
             // Ensure user-info is hidden if no username
             const userEl = document.getElementById('user-info');
@@ -749,6 +809,9 @@ window.updateAdminUI = updateAdminUI;
             if (loginNavBtn) loginNavBtn.style.display = 'flex';
             // Hide the "My Profile" button when user is not logged in
             document.getElementById('profile-btn').style.display = 'none';
+            // Hide mobile logout button when user is not logged in
+            const logoutNavBtn = document.getElementById('logout-nav-btn');
+            if (logoutNavBtn) logoutNavBtn.style.display = 'none';
         }
 
         const cityLat = localStorage.getItem('cityLat');
