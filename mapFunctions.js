@@ -12,10 +12,20 @@ async function handleSearch() {
 
 function selectCity(lat, lng) {
     // Only allow Butuan City selection
-    if (lat !== 8.9475 || lng !== 125.5406) {
+    const butuanLat = 8.9475;
+    const butuanLng = 125.5406;
+    
+    // Use a small tolerance for floating point comparison
+    const tolerance = 0.0001;
+    if (Math.abs(lat - butuanLat) > tolerance || Math.abs(lng - butuanLng) > tolerance) {
         alert("Only Butuan City is supported at this time.");
         return;
     }
+    
+    // Cache the city selection
+    localStorage.setItem('cityLat', lat.toString());
+    localStorage.setItem('cityLng', lng.toString());
+    
     hideModal();
     map.flyTo([lat, lng], 15, { duration: 1.5 });
 }
