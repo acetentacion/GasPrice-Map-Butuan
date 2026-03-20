@@ -25,6 +25,11 @@ function login() {
             document.getElementById('logout-btn').style.display = 'flex';
             document.getElementById('login-btn').style.display = 'none';
             document.getElementById('profile-btn').style.display = 'flex';
+            // Update mobile navigation buttons
+            const loginNavBtn = document.getElementById('login-nav-btn');
+            const profileNavBtn = document.getElementById('profile-nav-btn');
+            if (loginNavBtn) loginNavBtn.style.display = 'none';
+            if (profileNavBtn) profileNavBtn.style.display = 'flex';
             if (window.updateAdminUI) window.updateAdminUI();
             // Optionally reload or update UI
         }
