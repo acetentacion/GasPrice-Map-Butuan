@@ -8,8 +8,8 @@ function showStationDetails(data) {
     document.getElementById('station-name').innerText = data.name;
     document.getElementById('station-brand').innerText = data.brand;
     document.getElementById('station-address').innerText = data.address || 'Address not available';
-    const userLat = map.getCenter().lat;
-    const userLng = map.getCenter().lng;
+    const userLat = window.map.getCenter().lat;
+    const userLng = window.map.getCenter().lng;
     const distance = calculateDistance(userLat, userLng, data.lat, data.lng);
     document.getElementById('distance-value').innerText = `${distance} km`;
     const fuels = [
@@ -123,9 +123,25 @@ function showStationDetails(data) {
     if (data.submitted && data.submitted.photoUrl) {
         document.getElementById('station-address').innerHTML += `<br><img src="${data.submitted.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px; margin-top:8px;">`;
     }
+    
+    // Mobile-first panel behavior
     const panel = document.getElementById('info-panel');
+    const mapContainer = document.getElementById('map');
+    const isMobile = window.innerWidth < 768;
+    
     panel.classList.remove('hidden');
-    setTimeout(() => panel.classList.add('active'), 10);
+    
+    if (isMobile) {
+        // On mobile, slide in the full-screen panel and hide the map
+        setTimeout(() => {
+            panel.classList.add('active');
+            // Add class to map to hide it when panel is open on mobile
+            mapContainer.classList.add('map-with-panel-open');
+        }, 10);
+    } else {
+        // On desktop, use the original sliding up behavior
+        setTimeout(() => panel.classList.add('active'), 10);
+    }
 }
 
 export async function vote(type) {
