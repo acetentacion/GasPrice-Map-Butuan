@@ -90,7 +90,7 @@ function loadStationRankings(fuelType) {
                     
                     return `
                         <div class="bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer station-rank-item"
-                             onclick="focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng})">
+                             onclick="window.focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng}); window.closeStationRankings();">
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
@@ -99,12 +99,6 @@ function loadStationRankings(fuelType) {
                                     <div>
                                         <h3 class="font-black text-gray-800 text-lg">${station.stationName}</h3>
                                         <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">${station.brand}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Rank</div>
-                                    <div class="w-8 h-8 ${priceColor} text-white rounded-full flex items-center justify-center font-black text-sm">
-                                        #${index + 1}
                                     </div>
                                 </div>
                             </div>
@@ -121,6 +115,10 @@ function loadStationRankings(fuelType) {
                             <div class="mt-3 flex items-center justify-between text-xs text-gray-400">
                                 <span>Updated ${getTimeAgo(new Date(station.timestamp))}</span>
                                 <span class="px-2 py-1 bg-gray-100 rounded-full">Total Stations: ${data.totalStations}</span>
+                            </div>
+                            <div class="mt-4 flex gap-2">
+                                <button onclick="window.focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng}); window.closeStationRankings();" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">📍 View</button>
+                                <button onclick="window.getDirections(${station.lat}, ${station.lng}, '${station.stationName}')" class="flex-1 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors">🚗 GO</button>
                             </div>
                         </div>
                     `;

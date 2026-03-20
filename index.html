@@ -397,12 +397,6 @@
                                             <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">${station.brand}</p>
                                         </div>
                                     </div>
-                                    <div class="text-right">
-                                        <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Rank</div>
-                                        <div class="w-8 h-8 ${priceColor} text-white rounded-full flex items-center justify-center font-black text-sm">
-                                            #${index + 1}
-                                        </div>
-                                    </div>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-4 text-sm">
@@ -417,6 +411,10 @@
                                 <div class="mt-3 flex items-center justify-between text-xs text-gray-400">
                                     <span>Updated ${window.getTimeAgo(new Date(station.timestamp))}</span>
                                     <span class="px-2 py-1 bg-gray-100 rounded-full">Total Stations: ${data.totalStations}</span>
+                                </div>
+                                <div class="mt-4 flex gap-2">
+                                    <button onclick="window.focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng}); window.closeStationRankings();" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">📍 View</button>
+                                    <button onclick="window.getDirections(${station.lat}, ${station.lng}, '${station.stationName}')" class="flex-1 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors">🚗 GO</button>
                                 </div>
                             </div>
                         `;
@@ -560,6 +558,35 @@ window.updateAdminUI = updateAdminUI;
             if (placeholder) placeholder.classList.add('hidden');
         };
         reader.readAsDataURL(file);
+    };
+
+    // Navigation function to get directions
+    window.getDirections = function(destLat, destLng, stationName) {
+        // Try to get user's current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    
+                    // Create Google Maps URL with directions
+                    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${destLat},${destLng}&travelmode=driving`;
+                    
+                    // Open in new tab
+                    window.open(googleMapsUrl, '_blank');
+                },
+                (error) => {
+                    console.error("Error getting location:", error);
+                    // Fallback: open with just destination if we can't get user location
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${destLat},${destLng}`;
+                    window.open(googleMapsUrl, '_blank');
+                }
+            );
+        } else {
+            // Fallback: open with just destination if geolocation is not supported
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${destLat},${destLng}`;
+            window.open(googleMapsUrl, '_blank');
+        }
     };
 
     // --- 4. Initialization ---
