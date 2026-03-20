@@ -70,16 +70,16 @@ function closeLoginRequiredModal() {
 function showStationDetails(data) {
     currentStation = data;
     
-    // Check if we're on the page with the info panel (index.html)
+    // Check if we're on the page with the info panel (both index.html and map.html have these elements now)
     const stationNameEl = document.getElementById('station-name');
     const stationBrandEl = document.getElementById('station-brand');
     const stationAddressEl = document.getElementById('station-address');
     
-    // If we're on map.html, these elements won't exist, so we should handle it differently
+    // If we're on a page without the info panel elements, show map-focused details
     if (!stationNameEl || !stationBrandEl || !stationAddressEl) {
-        console.log('Info panel elements not found - likely on map.html. Showing map-focused details.');
+        console.log('Info panel elements not found - showing map-focused details.');
         
-        // On map.html, just show the station on the map and log the details
+        // Just show the station on the map and log the details
         if (window.map && data.lat && data.lng) {
             window.map.setView([data.lat, data.lng], 16, { animate: true });
             
@@ -290,9 +290,8 @@ function showStationDetails(data) {
         }
     }
     
-    // Mobile-first panel behavior
+    // Panel behavior for both index.html and map.html
     const panel = document.getElementById('info-panel');
-    const mapContainer = document.getElementById('map');
     
     if (!panel) {
         console.error('Info panel element not found');
@@ -301,24 +300,10 @@ function showStationDetails(data) {
     
     panel.classList.remove('hidden');
     
-    if (mapContainer) {
-        const isMobile = window.innerWidth < 768;
-        
-        if (isMobile) {
-            // On mobile, slide in the full-screen panel and hide the map
-            setTimeout(() => {
-                panel.classList.add('active');
-                // Add class to map to hide it when panel is open on mobile
-                mapContainer.classList.add('map-with-panel-open');
-            }, 10);
-        } else {
-            // On desktop, use the original sliding up behavior
-            setTimeout(() => panel.classList.add('active'), 10);
-        }
-    } else {
-        // Fallback: just show the panel without map manipulation
-        setTimeout(() => panel.classList.add('active'), 10);
-    }
+    // Use the new sliding animation (slide from right)
+    setTimeout(() => {
+        panel.classList.remove('translate-x-full');
+    }, 10);
 }
 
 export async function vote(type) {
