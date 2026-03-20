@@ -855,6 +855,11 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         const username = localStorage.getItem('username');
+        // Set global username variable for other functions to use
+        if (username) {
+            window.username = username;
+        }
+        
         if (username) {
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('logout-btn').style.display = 'flex';

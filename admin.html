@@ -91,6 +91,15 @@
                 ? config.API_BASE_URL 
                 : 'https://gasprice-map-butuan.onrender.com';
             
+            // Get username from localStorage since it's not available in admin context
+            const adminUsername = localStorage.getItem('username');
+            
+            if (!adminUsername) {
+                alert('Please log in first');
+                window.location.href = 'index.html';
+                return;
+            }
+            
             fetch(`${apiUrl}/api/approve-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -98,11 +107,14 @@
                     stationName: stationName.trim(),
                     lat: Number(lat),
                     lng: Number(lng),
-                    adminUsername: username
+                    adminUsername: adminUsername
                 })
             }).then(res => res.json()).then(result => {
                 showActionModal(result.message || result.error);
                 showPendingApprovals();
+            }).catch(err => {
+                console.error('Approve error:', err);
+                showActionModal('Error approving submission');
             });
         }
 
@@ -111,6 +123,15 @@
                 ? config.API_BASE_URL 
                 : 'https://gasprice-map-butuan.onrender.com';
             
+            // Get username from localStorage since it's not available in admin context
+            const adminUsername = localStorage.getItem('username');
+            
+            if (!adminUsername) {
+                alert('Please log in first');
+                window.location.href = 'index.html';
+                return;
+            }
+            
             fetch(`${apiUrl}/api/reject-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -118,11 +139,14 @@
                     stationName: stationName.trim(),
                     lat: Number(lat),
                     lng: Number(lng),
-                    adminUsername: username
+                    adminUsername: adminUsername
                 })
             }).then(res => res.json()).then(result => {
                 showActionModal(result.message || result.error);
                 showPendingApprovals();
+            }).catch(err => {
+                console.error('Reject error:', err);
+                showActionModal('Error rejecting submission');
             });
         }
 

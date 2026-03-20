@@ -14,11 +14,13 @@ function login() {
         body: JSON.stringify({ username, password })
     })
     .then(res => res.json())
-    .then(data => {
+        .then(data => {
         if (data.error) {
             showErrorMessage(data.error);
         } else {
             localStorage.setItem('username', data.username);
+            // Set global username variable for other functions to use
+            window.username = data.username;
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('user-info').innerText = data.username;
             document.getElementById('user-info').classList.remove('hidden');

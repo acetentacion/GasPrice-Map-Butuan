@@ -322,8 +322,8 @@ function showStationDetails(data) {
 }
 
 export async function vote(type) {
-    // 1. Get username from localStorage (Fixes the ReferenceError)
-    const username = localStorage.getItem('username');
+    // 1. Get username from global scope or localStorage
+    const username = window.username || localStorage.getItem('username');
     
     if (!username) {
         showLoginRequiredModal();
@@ -340,8 +340,8 @@ export async function vote(type) {
     const stationName = stationNameEl.innerText.toLowerCase().trim();
     
     // Ensure currentStation or map context is available
-    const lat = window.currentStation ? window.currentStation.lat : window.map.getCenter().lat;
-    const lng = window.currentStation ? window.currentStation.lng : window.map.getCenter().lng;
+    const lat = window.currentStation ? window.currentStation.lat : (window.map ? window.map.getCenter().lat : 8.9475);
+    const lng = window.currentStation ? window.currentStation.lng : (window.map ? window.map.getCenter().lng : 125.5406);
 
     try {
         const response = await fetch(`${config.API_BASE_URL}/api/vote`, {
@@ -438,6 +438,20 @@ function submitPrices() {
         console.error('Submit prices error:', err);
         showNetworkErrorModal();
     });
+}
+
+// Make sure showStationDetails is available globally
+if (typeof window !== 'undefined') {
+    window.showStationDetails = showStationDetails;
+    window.submitPrices = submitPrices;
+    window.showSuccessMessage = showSuccessMessage;
+    window.showErrorMessage = showErrorMessage;
+    window.showNetworkErrorModal = showNetworkErrorModal;
+    window.showLoginRequiredModal = showLoginRequiredModal;
+    window.closeSuccessModal = closeSuccessModal;
+    window.closeErrorModal = closeErrorModal;
+    window.closeNetworkErrorModal = closeNetworkErrorModal;
+    window.closeLoginRequiredModal = closeLoginRequiredModal;
 }
 
 export { showStationDetails, submitPrices, showSuccessMessage, showErrorMessage, showNetworkErrorModal, showLoginRequiredModal, closeSuccessModal, closeErrorModal, closeNetworkErrorModal, closeLoginRequiredModal };

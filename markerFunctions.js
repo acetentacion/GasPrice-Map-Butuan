@@ -59,7 +59,8 @@ async function renderMarkers(stations) {
         const marker = L.marker([lat, lon], { icon }).addTo(markerGroup);
         // Add both click and touch event handlers for mobile compatibility
         marker.on('click touchend', () => {
-            showStationDetails({
+            // Store the station data globally so showStationDetails can access it
+            window.currentStation = {
                 name: name,
                 brand: brand,
                 lat: lat,
@@ -67,7 +68,14 @@ async function renderMarkers(stations) {
                 address: address,
                 prices: prices,
                 submitted: latestSubmission
-            });
+            };
+            
+            // Call showStationDetails with the station data
+            if (typeof showStationDetails === 'function') {
+                showStationDetails(window.currentStation);
+            } else {
+                console.error('showStationDetails function not available');
+            }
         });
     });
     if (stations.filter(s => isInButuan(s.lat || s.center?.lat, s.lon || s.center?.lon)).length === 0) {
@@ -86,14 +94,23 @@ async function renderMarkers(stations) {
             const marker = L.marker([s.lat, s.lon]).addTo(markerGroup);
             // Add both click and touch event handlers for mobile compatibility
             marker.on('click touchend', () => {
-                showStationDetails({
+                // Store the station data globally so showStationDetails can access it
+                window.currentStation = {
                     name: s.tags.name,
                     brand: s.tags.brand,
                     lat: s.lat,
                     lng: s.lon,
+                    address: 'Mock Station',
                     prices: prices,
                     submitted: null
-                });
+                };
+                
+                // Call showStationDetails with the station data
+                if (typeof showStationDetails === 'function') {
+                    showStationDetails(window.currentStation);
+                } else {
+                    console.error('showStationDetails function not available');
+                }
             });
         });
     }
@@ -114,14 +131,23 @@ function renderMarkersFromBackend(prices) {
         const marker = L.marker([sub.lat, sub.lng], { icon }).addTo(markerGroup);
         // Add both click and touch event handlers for mobile compatibility
         marker.on('click touchend', () => {
-            showStationDetails({
+            // Store the station data globally so showStationDetails can access it
+            window.currentStation = {
                 name: sub.stationName,
                 brand: sub.brand,
                 lat: sub.lat,
                 lng: sub.lng,
+                address: 'Address not available',
                 prices: sub.prices,
                 submitted: sub
-            });
+            };
+            
+            // Call showStationDetails with the station data
+            if (typeof showStationDetails === 'function') {
+                showStationDetails(window.currentStation);
+            } else {
+                console.error('showStationDetails function not available');
+            }
         });
     });
 }
