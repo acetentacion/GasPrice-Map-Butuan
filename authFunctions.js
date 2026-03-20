@@ -21,7 +21,8 @@ function login() {
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('user-info').innerText = data.username;
             document.getElementById('user-info').classList.remove('hidden');
-            document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('logout-btn').style.display = 'flex';
+            document.getElementById('login-btn').style.display = 'none';
             document.getElementById('profile-btn').style.display = 'flex';
             if (window.updateAdminUI) window.updateAdminUI();
             // Optionally reload or update UI
