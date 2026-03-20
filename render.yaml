@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: gasprice-map-backend
+    name: gasprice-map-butuan
     env: node
     region: oregon
     plan: free

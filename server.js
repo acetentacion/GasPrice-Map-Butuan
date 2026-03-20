@@ -28,7 +28,7 @@ const corsOrigins = process.env.CORS_ORIGINS
         'http://localhost:5500',
         'http://127.0.0.1:5500',
         'https://gasfinderbxu.netlify.app',
-        'https://gasfinderbxu.onrender.com'
+        'https://gasprice-map-butuan.onrender.com'
     ];
 
 // Middleware

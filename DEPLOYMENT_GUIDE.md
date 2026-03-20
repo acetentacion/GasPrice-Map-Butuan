@@ -73,9 +73,9 @@ Add these environment variables in the Render dashboard:
 | `NODE_VERSION` | `18` |
 | `NODE_ENV` | `production` |
 | `MONGODB_URI` | Your MongoDB Atlas connection string |
-| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5500,http://127.0.0.1:5500,https://gasfinderbxu.netlify.app,https://gasprice-map-backend.onrender.com` |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5500,http://127.0.0.1:5500,https://gasfinderbxu.netlify.app,https://gasprice-map-butuan.onrender.com` |
 
-**Note**: The URL `https://gasprice-map-backend.onrender.com` is the example URL - your actual URL will be provided by Render after deployment.
+**Note**: The URL `https://gasprice-map-butuan.onrender.com` is your actual Render backend URL.
 
 ### 2.5 Health Check
 
