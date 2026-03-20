@@ -70,17 +70,58 @@ function closeLoginRequiredModal() {
 function showStationDetails(data) {
     currentStation = data;
     
-    // Check if elements exist before trying to access them
+    // Check if we're on the page with the info panel (index.html)
     const stationNameEl = document.getElementById('station-name');
     const stationBrandEl = document.getElementById('station-brand');
     const stationAddressEl = document.getElementById('station-address');
     
+    // If we're on map.html, these elements won't exist, so we should handle it differently
     if (!stationNameEl || !stationBrandEl || !stationAddressEl) {
-        console.error('Required DOM elements not found:', {
-            stationName: stationNameEl,
-            stationBrand: stationBrandEl,
-            stationAddress: stationAddressEl
-        });
+        console.log('Info panel elements not found - likely on map.html. Showing map-focused details.');
+        
+        // On map.html, just show the station on the map and log the details
+        if (window.map && data.lat && data.lng) {
+            window.map.setView([data.lat, data.lng], 16, { animate: true });
+            
+            // Create a popup with the station details
+            const popupContent = `
+                <div class="text-sm">
+                    <div class="font-bold text-gray-800">${data.name}</div>
+                    <div class="text-blue-600 font-bold uppercase text-xs tracking-wider mb-2">${data.brand}</div>
+                    <div class="text-gray-600 mb-2">${data.address || 'Address not available'}</div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="bg-blue-50 p-2 rounded">
+                            <div class="text-xs text-blue-500 font-bold uppercase tracking-wider">Diesel</div>
+                            <div class="font-black text-gray-900">₱${data.prices?.diesel?.toFixed(2) || '--'}</div>
+                        </div>
+                        <div class="bg-green-50 p-2 rounded">
+                            <div class="text-xs text-green-500 font-bold uppercase tracking-wider">91</div>
+                            <div class="font-black text-gray-900">₱${data.prices?.u91?.toFixed(2) || '--'}</div>
+                        </div>
+                        <div class="bg-red-50 p-2 rounded">
+                            <div class="text-xs text-red-500 font-bold uppercase tracking-wider">95</div>
+                            <div class="font-black text-gray-900">₱${data.prices?.u95?.toFixed(2) || '--'}</div>
+                        </div>
+                    </div>
+                    ${data.submitted ? `
+                        <div class="mt-2 text-xs text-gray-500">
+                            Status: ${data.submitted.confirmScore - data.submitted.disputeScore >= 5 ? 'Verified' : 'Pending'}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Create a marker at the station location with popup
+            const marker = L.marker([data.lat, data.lng]).addTo(window.map);
+            marker.bindPopup(popupContent).openPopup();
+            
+            // Remove the marker after 5 seconds to clean up
+            setTimeout(() => {
+                if (marker) {
+                    marker.remove();
+                }
+            }, 5000);
+        }
         return;
     }
     
