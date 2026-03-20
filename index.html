@@ -655,6 +655,15 @@
             return;
         }
 
+        // Sort stations by price for the selected fuel type (cheapest first)
+        if (currentFilter !== 'all') {
+            filteredStations.sort((a, b) => {
+                const priceA = a.prices[currentFilter];
+                const priceB = b.prices[currentFilter];
+                return priceA - priceB;
+            });
+        }
+
         list.innerHTML = filteredStations.map(station => {
             const brandLogo = window.getBrandLogo(station.brand);
             const minPrice = Math.min(
