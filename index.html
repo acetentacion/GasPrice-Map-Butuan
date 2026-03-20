@@ -3,17 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FuelFinder PH | Community Gas Map</title>
+    <title>FuelFinder PH | Station Finder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
-        @media (max-width: 640px) {
-            #map { min-height: 200px; }
-        }
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #city-modal { z-index: 50; background: rgba(0,0,0,0.8); }
         #info-panel { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
         #info-panel.active { transform: translateY(0); }
         .nozzle-diesel { background-color: #1f2937; }
@@ -80,12 +75,12 @@
         <aside class="hidden md:flex flex-col w-64 bg-white shadow-lg p-6 space-y-4">
     <h1 class="text-3xl font-black text-blue-600 mb-8">FuelFinder</h1>
 
-    <button id="show-city-modal-btn" class="flex items-center gap-3 w-full p-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-colors">
+    <button onclick="window.location.href='map.html'" class="flex items-center gap-3 w-full p-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <span>Select City</span>
+        <span>View Map</span>
     </button>
 
     <button onclick="showRankings()" class="flex items-center gap-3 w-full p-3 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors">
@@ -140,6 +135,13 @@
             <!-- Mobile Navigation Bar (Always Visible on Mobile) -->
             <nav class="md:hidden bg-white border-b border-gray-200 sticky top-0 z-40">
                 <div class="flex justify-around items-center py-3 px-4">
+                    <button onclick="window.location.href='map.html'" class="flex flex-col items-center gap-1 text-gray-600 hover:text-blue-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="text-xs font-bold">Map</span>
+                    </button>
                     <button onclick="showRankings()" class="flex flex-col items-center gap-1 text-gray-600 hover:text-blue-600 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -164,13 +166,6 @@
                         </svg>
                         <span class="text-xs font-bold">Logout</span>
                     </button>
-                    <button onclick="showCityModal()" class="flex flex-col items-center gap-1 text-gray-600 hover:text-green-600 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span class="text-xs font-bold">Location</span>
-                    </button>
                     <button onclick="showLoginModal()" class="flex flex-col items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors" id="login-nav-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -183,23 +178,41 @@
             <!-- Header for mobile -->
             <header class="md:hidden flex items-center justify-between bg-white shadow-sm p-4">
                 <h1 class="text-xl font-black text-blue-600">FuelFinder PH</h1>
-                <button id="show-city-modal-btn-mobile" class="p-2 bg-blue-100 text-blue-600 rounded-full font-bold">📍</button>
             </header>
             
-            <!-- Search Bar -->
+            <!-- Search & Filters Bar -->
             <div class="flex flex-wrap gap-2 p-4 bg-white shadow-sm">
                 <div class="relative flex-1 min-w-[200px]">
                     <input id="search-station" type="text" placeholder="Search station..." class="p-3 border rounded w-full" autocomplete="off" oninput="showStationSuggestions()">
                     <div id="station-suggestions" class="absolute bg-white border rounded shadow z-50" style="display:none; max-height:180px; overflow-y:auto; width:100%;"></div>
                 </div>
+                <div class="flex gap-2">
+                    <select id="fuel-filter" class="p-3 border rounded" onchange="filterStations()">
+                        <option value="all">All Fuels</option>
+                        <option value="diesel">Diesel</option>
+                        <option value="u91">Unleaded 91</option>
+                        <option value="u95">Unleaded 95</option>
+                    </select>
+                    <select id="sort-filter" class="p-3 border rounded" onchange="sortStations()">
+                        <option value="name">Sort by Name</option>
+                        <option value="price">Sort by Price</option>
+                        <option value="distance">Sort by Distance</option>
+                    </select>
+                </div>
             </div>
             
-            <!-- Map & Panels -->
+            <!-- Station List -->
             <div class="flex-1 flex flex-col md:flex-row">
-                <div class="flex-1 relative">
-                    <div id="map" class="h-[40vh] md:h-full w-full"></div>
-                    <div id="map-loader" class="loader absolute top-4 right-4 hidden"></div>
+                <div class="flex-1 p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-800">Gas Stations</h2>
+                        <span id="station-count" class="text-sm text-gray-500">Loading...</span>
+                    </div>
+                    <div id="station-list" class="space-y-3">
+                        <!-- Stations will be loaded here -->
+                    </div>
                 </div>
+                
                 <!-- Info Panel -->
                 <div id="info-panel" class="w-full md:w-[400px] bg-white rounded-3xl shadow-2xl p-8 m-4 hidden flex flex-col">
                     <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
@@ -247,25 +260,8 @@
             </div>
         </main>
     </div>
+    
     <!-- Modals -->
-    <div id="city-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
-            <h2 class="text-2xl font-black text-gray-800 mb-2">Find Fuel Prices ⛽</h2>
-            <p class="text-gray-500 mb-6 text-sm font-medium">Search a city in the Philippines to begin.</p>
-            <div class="relative mb-6">
-                <input type="text" id="city-search" placeholder="Search city (e.g. Butuan...)" class="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
-                <button onclick="handleSearch()" class="absolute right-4 top-4 text-blue-600 font-black">GO</button>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <button onclick="selectCity(14.5995, 120.9842)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Manila</button>
-                <button onclick="selectCity(10.3157, 123.8854)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Cebu</button>
-                <button onclick="selectCity(7.1907, 125.4553)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Davao</button>
-                <button onclick="selectCity(8.9475, 125.5406)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm text-blue-600">Butuan</button>
-            </div>
-            <button onclick="useGPS()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">Use My Location</button>
-        </div>
-    </div>
-    <!-- Other modals (update, confirm, success, login, register, history, rankings, profile) -->
     <!-- Login Modal -->
     <div id="login-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
@@ -443,20 +439,6 @@
     </div>
 </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // Initialize Leaflet map and expose globally
-        window.map = L.map('map').setView([8.9475, 125.5406], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(window.map);
-        // Initialize markerGroup and add to map
-        window.markerGroup = L.layerGroup().addTo(window.map);
-        
-        // Mobile touch event enhancement
-        // Remove the touchstart event listener that was blocking marker interactions
-        // Markers now handle touchend events directly for better mobile compatibility
-    </script>
     <script type="module" src="./config.js"></script>
     <script type="module" src="./mapFunctions.js"></script>
     <script type="module" src="./markerFunctions.js"></script>
@@ -600,14 +582,12 @@
         return colorMap[fuelType] || 'text-gray-600';
     };
 
-    // --- 3. UI Helpers ---
-    window.focusStationOnMap = function(name, lat, lng) {
-        document.getElementById('search-station').value = name;
-        if (window.map && lat && lng) {
-            window.map.setView([lat, lng], 16, { animate: true });
-        }
-        showStationSuggestions();
-    };
+    // --- 3. Station List Functions ---
+    let allStations = [];
+    let currentCityLat = null;
+    let currentCityLng = null;
+    let currentFilter = 'all';
+    let currentSort = 'name';
 
     window.showStationSuggestions = function() {
         const input = document.getElementById('search-station').value.trim();
@@ -634,47 +614,155 @@
             });
     };
 
-    function updateAdminUI() {
-    // Pull from localStorage instead of the DOM to avoid 'null' errors
-    const username = localStorage.getItem('username');
-    
-    if (!username) {
-        // If no user is logged in, ensure admin tools stay hidden
-        const adminTools = document.getElementById('admin-tools');
-        const adminBtn = document.getElementById('admin-approvals-btn');
-        if (adminTools) adminTools.style.display = 'none';
-        if (adminBtn) adminBtn.style.display = 'none';
-        return;
+    window.filterStations = function() {
+        currentFilter = document.getElementById('fuel-filter').value;
+        renderStationList();
+    };
+
+    window.sortStations = function() {
+        currentSort = document.getElementById('sort-filter').value;
+        renderStationList();
+    };
+
+    function renderStationList() {
+        const list = document.getElementById('station-list');
+        const count = document.getElementById('station-count');
+        
+        let filteredStations = allStations;
+
+        // Apply fuel filter
+        if (currentFilter !== 'all') {
+            filteredStations = filteredStations.filter(station => {
+                return station.prices && station.prices[currentFilter] !== undefined;
+            });
+        }
+
+        // Apply sorting
+        filteredStations.sort((a, b) => {
+            switch (currentSort) {
+                case 'name':
+                    return a.stationName.localeCompare(b.stationName);
+                case 'price':
+                    const aPrice = Math.min(
+                        a.prices?.diesel || Infinity,
+                        a.prices?.u91 || Infinity,
+                        a.prices?.u95 || Infinity
+                    );
+                    const bPrice = Math.min(
+                        b.prices?.diesel || Infinity,
+                        b.prices?.u91 || Infinity,
+                        b.prices?.u95 || Infinity
+                    );
+                    return aPrice - bPrice;
+                case 'distance':
+                    if (currentCityLat && currentCityLng) {
+                        const aDist = calculateDistance(currentCityLat, currentCityLng, a.lat, a.lng);
+                        const bDist = calculateDistance(currentCityLat, currentCityLng, b.lat, b.lng);
+                        return aDist - bDist;
+                    }
+                    return 0;
+                default:
+                    return 0;
+            }
+        });
+
+        if (filteredStations.length === 0) {
+            list.innerHTML = '<p class="text-gray-500 text-center py-8">No stations found. Try adjusting your filters.</p>';
+            count.innerText = '0 stations';
+            return;
+        }
+
+        list.innerHTML = filteredStations.map(station => {
+            const brandLogo = window.getBrandLogo(station.brand);
+            const minPrice = Math.min(
+                station.prices?.diesel || Infinity,
+                station.prices?.u91 || Infinity,
+                station.prices?.u95 || Infinity
+            );
+            const distance = currentCityLat && currentCityLng 
+                ? calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng).toFixed(2)
+                : '--';
+
+            return `
+                <div class="bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer station-item"
+                     onclick="showStationDetails('${station.stationName}', ${station.lat}, ${station.lng})">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                ${brandLogo}
+                            </div>
+                            <div>
+                                <h3 class="font-black text-gray-800 text-lg">${station.stationName}</h3>
+                                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">${station.brand}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Distance</div>
+                            <div class="text-sm font-black text-gray-900">${distance} km</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4 text-sm">
+                            <span class="text-gray-600">📍 ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)}</span>
+                            <span class="text-gray-600">👤 ${station.username}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Lowest Price</div>
+                            <div class="text-2xl font-black text-blue-600">₱${minPrice !== Infinity ? minPrice.toFixed(2) : '--'}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex gap-2">
+                        <button onclick="window.getDirections(${station.lat}, ${station.lng}, '${station.stationName}')" class="flex-1 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors">🚗 GO</button>
+                        <button onclick="window.location.href='map.html?lat=${station.lat}&lng=${station.lng}&name=${encodeURIComponent(station.stationName)}'" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">📍 Map</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        count.innerText = `${filteredStations.length} station${filteredStations.length !== 1 ? 's' : ''}`;
     }
 
-    fetch(`${config.API_BASE_URL}/api/user-score?username=${encodeURIComponent(username)}`)
-        .then(res => res.json())
-        .then(({ isAdmin }) => {
-            // Set global flag so stationDetails.js knows the user is an admin
-            window.isAdmin = isAdmin; 
+    // --- 4. UI Helpers ---
+    window.focusStationOnMap = function(name, lat, lng) {
+        document.getElementById('search-station').value = name;
+        showStationSuggestions();
+    };
 
+    function updateAdminUI() {
+        // Pull from localStorage instead of the DOM to avoid 'null' errors
+        const username = localStorage.getItem('username');
+        
+        if (!username) {
+            // If no user is logged in, ensure admin tools stay hidden
             const adminTools = document.getElementById('admin-tools');
             const adminBtn = document.getElementById('admin-approvals-btn');
-            
-            if (isAdmin) {
-                if (adminTools) adminTools.style.display = 'flex';
-                if (adminBtn) adminBtn.style.display = 'flex';
-            } else {
-                if (adminTools) adminTools.style.display = 'none';
-                if (adminBtn) adminBtn.style.display = 'none';
-            }
-        })
-        .catch(err => console.error("Admin check failed:", err));
-}
+            if (adminTools) adminTools.style.display = 'none';
+            if (adminBtn) adminBtn.style.display = 'none';
+            return;
+        }
 
-// Ensure it's available globally and runs on loads
-window.updateAdminUI = updateAdminUI;
+        fetch(`${config.API_BASE_URL}/api/user-score?username=${encodeURIComponent(username)}`)
+            .then(res => res.json())
+            .then(({ isAdmin }) => {
+                // Set global flag so stationDetails.js knows the user is an admin
+                window.isAdmin = isAdmin; 
 
-    function showCityModal() {
-        document.getElementById('city-modal').style.display = 'flex';
-            }
-    window.showCityModal = showCityModal;
-    document.getElementById('show-city-modal-btn').onclick = showCityModal;
+                const adminTools = document.getElementById('admin-tools');
+                const adminBtn = document.getElementById('admin-approvals-btn');
+                
+                if (isAdmin) {
+                    if (adminTools) adminTools.style.display = 'flex';
+                    if (adminBtn) adminBtn.style.display = 'flex';
+                } else {
+                    if (adminTools) adminTools.style.display = 'none';
+                    if (adminBtn) adminBtn.style.display = 'none';
+                }
+            })
+            .catch(err => console.error("Admin check failed:", err));
+    }
+
+    // Ensure it's available globally and runs on loads
+    window.updateAdminUI = updateAdminUI;
 
     window.logout = function() {
         localStorage.removeItem('username');
@@ -696,7 +784,6 @@ window.updateAdminUI = updateAdminUI;
         updateAdminUI();
     };
 
-    window.showCityModal = () => document.getElementById('city-modal').style.display = 'flex';
     window.openUpdateForm = () => document.getElementById('update-form').classList.remove('hidden');
     
     window.closePanel = function() {
@@ -763,7 +850,7 @@ window.updateAdminUI = updateAdminUI;
         }
     };
 
-    // --- 4. Initialization ---
+    // --- 5. Initialization ---
     window.brandLogos = {
         'shell': '/logos/shell.png',
         'petron': '/logos/petron.png',
@@ -772,8 +859,6 @@ window.updateAdminUI = updateAdminUI;
         'jetti': '/logos/jetti.png',
         'default': '/logos/default.png'
     };
-
-    
 
     window.addEventListener('DOMContentLoaded', () => {
         const username = localStorage.getItem('username');
@@ -817,21 +902,20 @@ window.updateAdminUI = updateAdminUI;
         const cityLat = localStorage.getItem('cityLat');
         const cityLng = localStorage.getItem('cityLng');
         if (cityLat && cityLng) {
-            document.getElementById('city-modal').style.display = 'none';
-            selectCity(parseFloat(cityLat), parseFloat(cityLng));
+            currentCityLat = parseFloat(cityLat);
+            currentCityLng = parseFloat(cityLng);
         } else {
-            document.getElementById('city-modal').style.display = 'flex';
+            // Default to Butuan
+            currentCityLat = 8.9475;
+            currentCityLng = 125.5406;
         }
         
         updateAdminUI();
-        fetchGasStations();
-
-    
-        
+        fetchGasStations().then(stations => {
+            allStations = stations;
+            renderStationList();
+        });
     });
-
-    
-    
 </script>
 </body>
 </html>

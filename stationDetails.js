@@ -101,7 +101,7 @@ function showStationDetails(data) {
                     adminUsername: username
                 })
             }).then(res => res.json()).then(result => {
-                alert(result.message || result.error);
+                showSuccessMessage(result.message || 'Submission flagged successfully');
                 fetchGasStations();
             });
         };
@@ -116,7 +116,7 @@ function showStationDetails(data) {
                     adminUsername: username
                 })
             }).then(res => res.json()).then(result => {
-                alert(result.message || result.error);
+                showSuccessMessage(result.message || 'Submission removed successfully');
                 fetchGasStations();
             });
         };
@@ -152,8 +152,7 @@ export async function vote(type) {
     const username = localStorage.getItem('username');
     
     if (!username) {
-        alert('Please log in to vote.');
-        // Optional: window.showLoginModal();
+        showLoginRequiredModal();
         return;
     }
 
@@ -178,33 +177,32 @@ export async function vote(type) {
             if (window.closePanel) window.closePanel();
             if (window.fetchGasStations) window.fetchGasStations();
             
-            // Note: Ensure showSuccessModal is defined or use alert
-            alert("Vote recorded!"); 
+            showSuccessMessage("Vote recorded!");
         } else {
             console.log('Vote error status:', response.status);
             if (data.error === 'Already voted') {
-                alert('You have already voted on this submission.');
+                showErrorMessage('You have already voted on this submission.');
             } else {
-                alert(data.error || "Error recording vote.");
+                showErrorMessage(data.error || "Error recording vote.");
             }
         }
     } catch (err) {
         console.error('Catch error:', err);
-        alert("Network error.");
+        showNetworkErrorModal();
     }
 }
 
 function submitPrices() {
     const username = localStorage.getItem('username');
     if (!username) {
-        alert('Please log in to submit prices.');
+        showLoginRequiredModal();
         return;
     }
     const diesel = parseFloat(document.getElementById('new-diesel').value);
     const u91 = parseFloat(document.getElementById('new-u91').value);
     const u95 = parseFloat(document.getElementById('new-u95').value);
     if (isNaN(diesel) || isNaN(u91) || isNaN(u95)) {
-        alert('Please enter valid prices.');
+        showErrorMessage('Please enter valid prices.');
         return;
     }
     const photoInput = document.getElementById('price-photo');
@@ -253,8 +251,12 @@ function submitPrices() {
             if (window.fetchGasStations) window.fetchGasStations();
             
         } else {
-            alert(result.error || 'Submission failed.');
+            showErrorMessage(result.error || 'Submission failed.');
         }
+    })
+    .catch(err => {
+        console.error('Submit prices error:', err);
+        showNetworkErrorModal();
     });
 }
 

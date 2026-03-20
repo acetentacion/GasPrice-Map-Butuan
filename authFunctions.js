@@ -5,7 +5,7 @@ function login() {
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
     if (!username || !password) {
-        alert('Please enter username and password.');
+        showErrorMessage('Please enter username and password.');
         return;
     }
     fetch(`${config.API_BASE_URL}/api/login`, {
@@ -16,7 +16,7 @@ function login() {
     .then(res => res.json())
     .then(data => {
         if (data.error) {
-            alert(data.error);
+            showErrorMessage(data.error);
         } else {
             localStorage.setItem('username', data.username);
             document.getElementById('login-modal').style.display = 'none';
@@ -35,6 +35,10 @@ function login() {
             if (window.updateAdminUI) window.updateAdminUI();
             // Optionally reload or update UI
         }
+    })
+    .catch(err => {
+        console.error('Login error:', err);
+        showNetworkErrorModal();
     });
 }
 
@@ -43,11 +47,11 @@ function register() {
     const password = document.getElementById('register-password').value;
     const confirm = document.getElementById('register-confirm').value;
     if (!username || !password || !confirm) {
-        alert('Please fill all fields.');
+        showErrorMessage('Please fill all fields.');
         return;
     }
     if (password !== confirm) {
-        alert('Passwords do not match.');
+        showErrorMessage('Passwords do not match.');
         return;
     }
     fetch(`${config.API_BASE_URL}/api/register`, {
@@ -58,11 +62,15 @@ function register() {
     .then(res => res.json())
     .then(data => {
         if (data.error) {
-            alert(data.error);
+            showErrorMessage(data.error);
         } else {
-            alert('Registration successful! Please log in.');
+            showSuccessMessage('Registration successful! Please log in.');
             showLoginModal();
         }
+    })
+    .catch(err => {
+        console.error('Registration error:', err);
+        showNetworkErrorModal();
     });
 }
 

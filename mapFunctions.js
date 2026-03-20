@@ -10,7 +10,7 @@ async function handleSearch() {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}, Philippines`);
     const data = await res.json();
     if (data.length > 0) selectCity(parseFloat(data[0].lat), parseFloat(data[0].lon));
-    else alert("Location not found in PH.");
+    else showErrorMessage("Location not found in PH.");
 }
 
 function selectCity(lat, lng) {
@@ -21,7 +21,7 @@ function selectCity(lat, lng) {
     // Use a small tolerance for floating point comparison
     const tolerance = 0.0001;
     if (Math.abs(lat - butuanLat) > tolerance || Math.abs(lng - butuanLng) > tolerance) {
-        alert("Only Butuan City is supported at this time.");
+        showErrorMessage("Only Butuan City is supported at this time.");
         return;
     }
     
@@ -51,10 +51,10 @@ function hideModal() {
 }
 
 function vote(type) {
-            if (!username) {
-                alert('Please log in to vote.');
-                return;
-            }
+    if (!username) {
+        showLoginRequiredModal();
+        return;
+    }
             const stationName = document.getElementById('station-name').innerText.toLowerCase().trim();
             const lat = currentStation ? currentStation.lat : map.getCenter().lat;
             const lng = currentStation ? currentStation.lng : map.getCenter().lng;
@@ -75,17 +75,17 @@ function vote(type) {
                     response.json().then(data => {
                         console.log('Error data:', data);
                         if (data.error === 'Already voted') {
-                            alert('You have already voted on this submission.');
+                            showErrorMessage('You have already voted on this submission.');
                         } else {
-                            alert(data.error || "Error recording vote.");
+                            showErrorMessage(data.error || "Error recording vote.");
                         }
                     }).catch(() => {
-                        alert("Error recording vote.");
+                        showNetworkErrorModal();
                     });
                 }
             }).catch(err => {
                 console.log('Catch error:', err);
-                alert("Network error.");
+                showNetworkErrorModal();
             });
         }
 
