@@ -682,7 +682,7 @@
             let distance = '--';
             if (currentCityLat && currentCityLng) {
                 const dist = calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng);
-                if (dist !== undefined && dist !== null) {
+                if (dist !== undefined && dist !== null && typeof dist === 'number') {
                     distance = dist.toFixed(2);
                 }
             }
