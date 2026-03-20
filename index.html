@@ -178,7 +178,7 @@
                         <button onclick="setFuelFilter('all')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-colors" data-fuel="all">All Fuels</button>
                         <button onclick="setFuelFilter('diesel')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-colors" data-fuel="diesel">Diesel</button>
                         <button onclick="setFuelFilter('u91')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-green-500 hover:text-green-600 transition-colors" data-fuel="u91">Unleaded 91</button>
-                        <button onclick="setFuelFilter('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Unleaded 95</button>
+                        <button onclick="setFuelFilter('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Premium 95</button>
                     </div>
                 </div>
             </div>
@@ -350,7 +350,7 @@
             <div class="flex gap-2 mb-6">
                 <button onclick="loadStationRankings('diesel')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-colors" data-fuel="diesel">Diesel</button>
                 <button onclick="loadStationRankings('u91')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-green-500 hover:text-green-600 transition-colors" data-fuel="u91">Unleaded 91</button>
-                <button onclick="loadStationRankings('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Unleaded 95</button>
+                <button onclick="loadStationRankings('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Premium 95</button>
             </div>
             
             <!-- Current Selection Indicator -->
@@ -396,7 +396,7 @@
                     <input id="new-u91" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
                 </div>
                 <div>
-                    <label class="block text-xs font-black text-gray-400 uppercase mb-1">Unleaded 95</label>
+                    <label class="block text-xs font-black text-gray-400 uppercase mb-1">Premium 95</label>
                     <input id="new-u95" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
                 </div>
             </div>
@@ -482,7 +482,7 @@
         const fuelNames = {
             'diesel': 'Diesel',
             'u91': 'Unleaded 91', 
-            'u95': 'Unleaded 95'
+            'u95': 'Premium 95'
         };
         
         if (display) {
@@ -666,17 +666,37 @@
 
         list.innerHTML = filteredStations.map(station => {
             const brandLogo = window.getBrandLogo(station.brand);
+            
+            // Calculate minimum price, handling null/undefined values
+            const prices = station.prices || {};
             const minPrice = Math.min(
-                station.prices?.diesel || Infinity,
-                station.prices?.u91 || Infinity,
-                station.prices?.u95 || Infinity
+                prices.diesel !== null && prices.diesel !== undefined ? prices.diesel : Infinity,
+                prices.u91 !== null && prices.u91 !== undefined ? prices.u91 : Infinity,
+                prices.u95 !== null && prices.u95 !== undefined ? prices.u95 : Infinity
             );
+            
             let distance = '--';
             if (currentCityLat && currentCityLng) {
                 const dist = calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng);
                 if (dist !== undefined && dist !== null && typeof dist === 'number') {
                     distance = dist.toFixed(2);
                 }
+            }
+
+            // Check if station has any price data
+            const hasPriceData = prices.diesel !== null && prices.u91 !== null && prices.u95 !== null;
+            
+            // Create price display
+            let priceDisplay = '';
+            if (hasPriceData) {
+                priceDisplay = `
+                    <div class="text-2xl font-black text-blue-600">₱${minPrice !== Infinity ? minPrice.toFixed(2) : '--'}</div>
+                `;
+            } else {
+                priceDisplay = `
+                    <div class="text-sm text-gray-500 font-medium">No price data</div>
+                    <div class="text-xs text-gray-400">Submit prices to help the community</div>
+                `;
             }
 
             return `
@@ -700,11 +720,11 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-4 text-sm">
                             <span class="text-gray-600">📍 ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)}</span>
-                            <span class="text-gray-600">👤 ${station.username}</span>
+                            ${station.username ? `<span class="text-gray-600">👤 ${station.username}</span>` : `<span class="text-gray-400">👤 No data</span>`}
                         </div>
                         <div class="text-right">
                             <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Lowest Price</div>
-                            <div class="text-2xl font-black text-blue-600">₱${minPrice !== Infinity ? minPrice.toFixed(2) : '--'}</div>
+                            ${priceDisplay}
                         </div>
                     </div>
                     <div class="mt-3 flex gap-2">

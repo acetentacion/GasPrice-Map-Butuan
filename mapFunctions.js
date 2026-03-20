@@ -112,8 +112,9 @@ function vote(type) {
 }
 
 async function fetchGasStations(force = false) {
-    // Only run map-related functionality if we're on the map page
+    // Check if we're on the index page (no map object) or map page
     if (typeof window !== 'undefined' && window.map) {
+        // Map page logic - existing functionality
         const loader = document.getElementById('map-loader');
         const currentZoom = map.getZoom();
         if (currentZoom < 10) {
@@ -144,10 +145,94 @@ async function fetchGasStations(force = false) {
             loader.classList.add('hidden');
         }
     } else {
-        // For station-focused page, fetch from our API using /api/prices endpoint
+        // Index page logic - fetch from OpenStreetMap and enrich with API data
         try {
-            const response = await fetch(`${config.API_BASE_URL}/api/prices?approved=true`);
-            const stations = await response.json();
+            // Fetch from OpenStreetMap
+            const query = `[out:json][timeout:25];\n(node[\"amenity\"=\"fuel\"](8.78833,125.37694,9.10833,125.69694);\n way[\"amenity\"=\"fuel\"](8.78833,125.37694,9.10833,125.69694););\nout center;`;
+            const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(query)});
+            const osmData = await res.json();
+            
+            // Fetch price data from our API
+            let submittedPrices = [];
+            try {
+                const priceRes = await fetch(`${config.API_BASE_URL}/api/prices?approved=true`);
+                submittedPrices = await priceRes.json();
+            } catch (err) {
+                console.error('Failed to fetch submitted prices:', err);
+            }
+            
+            // Process and combine the data (similar to renderMarkers logic)
+            const stations = [];
+            
+            osmData.elements.forEach(s => {
+                const lat = s.lat || s.center?.lat;
+                const lon = s.lon || s.center?.lon;
+                if (!lat || !lon) return;
+                if (!isInButuan(lat, lon)) return;
+                
+                const name = s.tags.name || "Gas Station";
+                const brand = s.tags.brand || s.tags.operator || "Independent";
+                const address = [
+                    s.tags['addr:street'] || '',
+                    s.tags['addr:city'] || '',
+                    s.tags['addr:postcode'] || ''
+                ].filter(Boolean).join(', ');
+                
+                // Find matching price submission
+                let closestSubmission = null;
+                let minDistance = Infinity;
+                submittedPrices.forEach(sub => {
+                    if (isInButuan(sub.lat, sub.lng) && sub.stationName.toLowerCase().trim() === name.toLowerCase().trim()) {
+                        const distance = Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111;
+                        if (distance < 1 && distance < minDistance) {
+                            minDistance = distance;
+                            closestSubmission = sub;
+                        }
+                    }
+                });
+                
+                // Get latest submission for this station
+                const stationSubmissions = submittedPrices
+                    .filter(sub =>
+                        isInButuan(sub.lat, sub.lng) &&
+                        sub.stationName.toLowerCase().trim() === name.toLowerCase().trim() &&
+                        Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111 < 1 &&
+                        sub.approved === true
+                    )
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                const latestSubmission = stationSubmissions
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+                
+                const prices = latestSubmission ? latestSubmission.prices : {
+                    diesel: null,
+                    u91: null,
+                    u95: null
+                };
+                
+                stations.push({
+                    stationName: name,
+                    brand: brand,
+                    lat: lat,
+                    lng: lon,
+                    address: address,
+                    prices: prices,
+                    submitted: latestSubmission,
+                    username: latestSubmission ? latestSubmission.username : null
+                });
+            });
+            
+            // If no OSM data found, use mock data like the original renderMarkers
+            if (stations.length === 0) {
+                console.log('No stations found in Butuan, using mock data');
+                const mockStations = [
+                    { stationName: 'Petron Butuan', brand: 'Petron', lat: 8.9475, lng: 125.5406, prices: { diesel: null, u91: null, u95: null } },
+                    { stationName: 'Shell Butuan', brand: 'Shell', lat: 8.9500, lng: 125.5350, prices: { diesel: null, u91: null, u95: null } },
+                    { stationName: 'Caltex Butuan', brand: 'Caltex', lat: 8.9450, lng: 125.5450, prices: { diesel: null, u91: null, u95: null } }
+                ];
+                return mockStations;
+            }
+            
             return stations;
         } catch (error) {
             console.error('Error fetching gas stations:', error);

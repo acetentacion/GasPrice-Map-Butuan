@@ -86,7 +86,7 @@ function showStationDetails(data) {
             // Create a popup with the station details
             const popupContent = `
                 <div class="text-sm">
-                    <div class="font-bold text-gray-800">${data.name}</div>
+                    <div class="font-bold text-gray-800">${data.stationName || data.name}</div>
                     <div class="text-blue-600 font-bold uppercase text-xs tracking-wider mb-2">${data.brand}</div>
                     <div class="text-gray-600 mb-2">${data.address || 'Address not available'}</div>
                     <div class="grid grid-cols-3 gap-2 text-xs">
@@ -125,7 +125,7 @@ function showStationDetails(data) {
         return;
     }
     
-    stationNameEl.innerText = data.name;
+    stationNameEl.innerText = data.stationName || data.name;
     stationBrandEl.innerText = data.brand;
     stationAddressEl.innerText = data.address || 'Address not available';
     // Check if map exists before trying to access it
@@ -372,7 +372,7 @@ function submitPrices() {
     }
     const photoInput = document.getElementById('price-photo');
     const formData = new FormData();
-    formData.append('stationName', String(currentStation.name));
+    formData.append('stationName', String(currentStation.stationName || currentStation.name));
     formData.append('lat', String(currentStation.lat));
     formData.append('lng', String(currentStation.lng));
     formData.append('username', String(username));
