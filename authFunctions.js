@@ -28,8 +28,10 @@ function login() {
             // Update mobile navigation buttons
             const loginNavBtn = document.getElementById('login-nav-btn');
             const profileNavBtn = document.getElementById('profile-nav-btn');
+            const logoutNavBtn = document.getElementById('logout-nav-btn');
             if (loginNavBtn) loginNavBtn.style.display = 'none';
             if (profileNavBtn) profileNavBtn.style.display = 'flex';
+            if (logoutNavBtn) logoutNavBtn.style.display = 'flex';
             if (window.updateAdminUI) window.updateAdminUI();
             // Optionally reload or update UI
         }
