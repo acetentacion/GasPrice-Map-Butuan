@@ -25,36 +25,73 @@
         let username = localStorage.getItem('username');
         // You may want to check admin status here as well
 
+        // Ensure config is available
         async function showPendingApprovals() {
-            const res = await fetch(`${config.API_BASE_URL}/api/prices?approved=false`);
-            const pending = await res.json();
-            const list = document.getElementById('pending-list');
-            if (pending.length === 0) {
-                list.innerHTML = '<p class="text-gray-500">No pending submissions.</p>';
-                return;
+            // Wait for config to be loaded
+            if (typeof config === 'undefined' || !config.API_BASE_URL) {
+                // Fallback to hardcoded URL if config is not available
+                const fallbackUrl = 'https://gasprice-map-butuan.onrender.com';
+                const res = await fetch(`${fallbackUrl}/api/prices?approved=false`);
+                const pending = await res.json();
+                const list = document.getElementById('pending-list');
+                if (pending.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500">No pending submissions.</p>';
+                    return;
+                }
+                list.innerHTML = pending.map(sub => {
+                    const safeName = sub.stationName.replace(/'/g, "\\'");
+                    return `
+                        <div class="p-4 border rounded mb-4 bg-gray-50">
+                            <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
+                            <div>
+                                Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
+                                91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
+                                95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
+                            </div>
+                            ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px;"></div>` : ''}
+                            <div class="mt-2">
+                                <button onclick="approveSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-green-500 text-white px-3 py-1 rounded mr-2">Approve</button>
+                                <button onclick="rejectSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                // Use config URL
+                const res = await fetch(`${config.API_BASE_URL}/api/prices?approved=false`);
+                const pending = await res.json();
+                const list = document.getElementById('pending-list');
+                if (pending.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500">No pending submissions.</p>';
+                    return;
+                }
+                list.innerHTML = pending.map(sub => {
+                    const safeName = sub.stationName.replace(/'/g, "\\'");
+                    return `
+                        <div class="p-4 border rounded mb-4 bg-gray-50">
+                            <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
+                            <div>
+                                Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
+                                91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
+                                95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
+                            </div>
+                            ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px;"></div>` : ''}
+                            <div class="mt-2">
+                                <button onclick="approveSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-green-500 text-white px-3 py-1 rounded mr-2">Approve</button>
+                                <button onclick="rejectSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             }
-            list.innerHTML = pending.map(sub => {
-                const safeName = sub.stationName.replace(/'/g, "\\'");
-                return `
-                    <div class="p-4 border rounded mb-4 bg-gray-50">
-                        <div><b>${sub.stationName}</b> (${sub.lat !== undefined ? sub.lat.toFixed(4) : 'N/A'}, ${sub.lng !== undefined ? sub.lng.toFixed(4) : 'N/A'})</div>
-                        <div>
-                            Diesel: ₱${sub.prices && typeof sub.prices.diesel === 'number' ? sub.prices.diesel.toFixed(2) : 'N/A'} |
-                            91: ₱${sub.prices && typeof sub.prices.u91 === 'number' ? sub.prices.u91.toFixed(2) : 'N/A'} |
-                            95: ₱${sub.prices && typeof sub.prices.u95 === 'number' ? sub.prices.u95.toFixed(2) : 'N/A'}
-                        </div>
-                        ${sub.photoUrl ? `<div class="mt-2"><img src="${sub.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px;"></div>` : ''}
-                        <div class="mt-2">
-                            <button onclick="approveSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-green-500 text-white px-3 py-1 rounded mr-2">Approve</button>
-                            <button onclick="rejectSubmission('${safeName}', ${sub.lat}, ${sub.lng})" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
         }
 
         function approveSubmission(stationName, lat, lng) {
-            fetch(`${config.API_BASE_URL}/api/approve-price`, {
+            const apiUrl = (typeof config !== 'undefined' && config.API_BASE_URL) 
+                ? config.API_BASE_URL 
+                : 'https://gasprice-map-butuan.onrender.com';
+            
+            fetch(`${apiUrl}/api/approve-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -70,7 +107,11 @@
         }
 
         function rejectSubmission(stationName, lat, lng) {
-            fetch(`${config.API_BASE_URL}/api/reject-price`, {
+            const apiUrl = (typeof config !== 'undefined' && config.API_BASE_URL) 
+                ? config.API_BASE_URL 
+                : 'https://gasprice-map-butuan.onrender.com';
+            
+            fetch(`${apiUrl}/api/reject-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -94,7 +135,11 @@
             document.getElementById('action-modal').classList.add('hidden');
         }
 
-        fetch(`${config.API_BASE_URL}/api/user-score?username=` + encodeURIComponent(username))
+        const apiUrl = (typeof config !== 'undefined' && config.API_BASE_URL) 
+            ? config.API_BASE_URL 
+            : 'https://gasprice-map-butuan.onrender.com';
+            
+        fetch(`${apiUrl}/api/user-score?username=` + encodeURIComponent(username))
             .then(res => res.json())
             .then(data => {
                 if (!data.isAdmin) {
