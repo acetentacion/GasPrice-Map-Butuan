@@ -11,7 +11,8 @@ const PORT = process.env.PORT || 3000;
 const upload = multer({ dest: path.join(__dirname, 'uploads/') });
 
 // MongoDB connection
-mongoose.connect('mongodb+srv://edgieace_db_user:Wildflowers-01@cluster0.w6ycdks.mongodb.net/gasprice?retryWrites=true&w=majority')
+const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://edgieace_db_user:Wildflowers-01@cluster0.w6ycdks.mongodb.net/gasprice?retryWrites=true&w=majority';
+mongoose.connect(mongoUri)
     .then(() => {
         console.log('MongoDB connected!');
     })
@@ -19,21 +20,24 @@ mongoose.connect('mongodb+srv://edgieace_db_user:Wildflowers-01@cluster0.w6ycdks
         console.error('MongoDB connection error:', err);
     });
 
+// CORS Configuration
+const corsOrigins = process.env.CORS_ORIGINS 
+    ? process.env.CORS_ORIGINS.split(',').map(url => url.trim())
+    : [
+        'http://localhost:3000',
+        'http://localhost:5500',
+        'http://127.0.0.1:5500',
+        'https://gasfinderbxu.netlify.app',
+        'https://gasfinderbxu.onrender.com'
+    ];
+
 // Middleware
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         
-        const allowedOrigins = [
-            'http://localhost:3000',
-            'http://localhost:5500',
-            'http://127.0.0.1:5500',
-            'https://gasfinderbxu.netlify.app',
-            'https://gasfinderbxu.onrender.com'
-        ];
-        
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (corsOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -431,6 +435,15 @@ app.get('/api/station-rankings', async (req, res) => {
         console.error('Error fetching station rankings:', error);
         res.status(500).json({ error: 'Failed to fetch station rankings' });
     }
+});
+
+// Health check endpoint for Render
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
 });
 
 app.listen(PORT, () => {

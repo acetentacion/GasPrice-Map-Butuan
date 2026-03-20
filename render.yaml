@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: gasprice-map-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_VERSION
+        value: "18"
+      - key: NODE_ENV
+        value: "production"
+    healthCheckPath: "/api/health"
+    disk:
+      name: data
+      mountPath: /app/uploads
+      sizeGB: 1

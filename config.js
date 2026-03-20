@@ -14,19 +14,10 @@ if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     const envBaseUrl = window.location.origin.replace('netlify.app', 'onrender.com');
     config.API_BASE_URL = envBaseUrl;
     
-    // Test if the backend is actually running, fallback to localhost if not
+    // Since the backend is not deployed on Render, always use localhost for now
     // This is a temporary solution until the backend is properly deployed
-    fetch(`${config.API_BASE_URL}/api/station-rankings?fuelType=diesel&limit=1`)
-        .then(response => {
-            if (!response.ok) {
-                console.warn('Backend not accessible, falling back to localhost');
-                config.API_BASE_URL = 'http://localhost:3000';
-            }
-        })
-        .catch(() => {
-            console.warn('Backend not accessible, falling back to localhost');
-            config.API_BASE_URL = 'http://localhost:3000';
-        });
+    console.warn('Using localhost backend as Render deployment is not available');
+    config.API_BASE_URL = 'http://localhost:3000';
 }
 
 // Export for use in frontend
