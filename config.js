@@ -3,7 +3,9 @@
 
 const config = {
     // API base URL - will be replaced by environment variables in production
-    API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:3000'
+    API_BASE_URL: (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
+        ? 'http://localhost:3000' 
+        : (window.location.origin || window.location.protocol + '//' + window.location.host)
 };
 
 // Export for use in frontend
