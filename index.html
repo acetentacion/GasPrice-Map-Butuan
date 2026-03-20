@@ -680,7 +680,7 @@
                 station.prices?.u95 || Infinity
             );
             const distance = currentCityLat && currentCityLng 
-                ? calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng).toFixed(2)
+                ? (calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng) || '--').toFixed(2)
                 : '--';
 
             return `
