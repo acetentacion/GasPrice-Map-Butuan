@@ -22,6 +22,7 @@ function login() {
             document.getElementById('user-info').innerText = data.username;
             document.getElementById('user-info').classList.remove('hidden');
             document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('profile-btn').style.display = 'flex';
             if (window.updateAdminUI) window.updateAdminUI();
             // Optionally reload or update UI
         }
@@ -58,11 +59,10 @@ function register() {
 
 function showRegisterModal() {
     document.getElementById('login-modal').style.display = 'none';
-    document.getElementById('register-modal').style.display = 'flex';
+    // Note: register modal not implemented in HTML, so just hide login modal
 }
 
 function showLoginModal() {
-    document.getElementById('register-modal').style.display = 'none';
     document.getElementById('login-modal').style.display = 'flex';
 }
 

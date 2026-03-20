@@ -49,7 +49,7 @@
         <span>Station Rankings</span>
     </button>
 
-    <button onclick="showUserProfile()" class="flex items-center gap-3 w-full p-3 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors">
+    <button onclick="showUserProfile()" class="flex items-center gap-3 w-full p-3 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors" id="profile-btn" style="display:none;">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
@@ -67,11 +67,18 @@
 </button>
 
     <div class="mt-auto">
-        <button onclick="logout()" id="logout-btn" class="flex items-center gap-3 w-full p-3 text-red-500 rounded-xl font-bold hover:bg-red-50 transition-colors">
+        <div id="user-info" class="hidden text-sm font-bold text-gray-600 mb-2"></div>
+        <button onclick="logout()" id="logout-btn" class="flex items-center gap-3 w-full p-3 text-red-500 rounded-xl font-bold hover:bg-red-50 transition-colors" style="display:none;">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             <span>Logout</span>
+        </button>
+        <button onclick="showLoginModal()" id="login-btn" class="flex items-center gap-3 w-full p-3 text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+            <span>Login</span>
         </button>
     </div>
 </aside>
@@ -513,7 +520,7 @@
         .catch(err => console.error("Admin check failed:", err));
 }
 
-// Ensure it's available globally and runs on load
+// Ensure it's available globally and runs on loads
 window.updateAdminUI = updateAdminUI;
 
     function showCityModal() {
@@ -527,6 +534,7 @@ window.updateAdminUI = updateAdminUI;
         const userEl = document.getElementById('user-info');
         if(userEl) userEl.innerText = '';
         document.getElementById('logout-btn').classList.add('hidden');
+        document.getElementById('profile-btn').style.display = 'none';
         document.getElementById('login-modal').style.display = 'flex';
         updateAdminUI();
     };
@@ -553,21 +561,6 @@ window.updateAdminUI = updateAdminUI;
         reader.readAsDataURL(file);
     };
 
-    window.updateAdminUI = function() {
-        const username = localStorage.getItem('username') || 'Guest';
-        fetch(`http://localhost:3000/api/user-score?username=${encodeURIComponent(username)}`)
-            .then(res => res.json())
-            .then(({ isAdmin }) => {
-                const adminTools = document.getElementById('admin-tools');
-                const btn = document.getElementById('admin-approvals-btn');
-                if (adminTools) adminTools.style.display = isAdmin ? '' : 'none';
-                if (btn) btn.style.display = isAdmin ? 'flex' : 'none';
-                
-                
-            })
-            .catch(() => {});
-    };
-
     // --- 4. Initialization ---
     window.brandLogos = {
         'shell': '/logos/shell.png',
@@ -584,7 +577,23 @@ window.updateAdminUI = updateAdminUI;
         const username = localStorage.getItem('username');
         if (username) {
             document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('logout-btn').style.display = 'flex';
+            document.getElementById('login-btn').style.display = 'none';
+            // Show and populate the user-info element
+            const userEl = document.getElementById('user-info');
+            if (userEl) {
+                userEl.innerText = username;
+                userEl.classList.remove('hidden');
+            }
+        } else {
+            // Ensure user-info is hidden if no username
+            const userEl = document.getElementById('user-info');
+            if (userEl) {
+                userEl.innerText = '';
+                userEl.classList.add('hidden');
+            }
+            // Show login button when not logged in
+            document.getElementById('login-btn').style.display = 'flex';
         }
 
         const cityLat = localStorage.getItem('cityLat');
