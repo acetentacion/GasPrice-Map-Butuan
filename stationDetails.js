@@ -6,21 +6,116 @@ let currentStation = null;
 // Import config for API URLs
 import config from './config.js';
 
+// Modal functions
+function showSuccessMessage(message) {
+    const successModal = document.getElementById('success-modal');
+    if (successModal) {
+        const messageEl = successModal.querySelector('p');
+        if (messageEl) messageEl.innerText = message;
+        successModal.classList.remove('hidden');
+    }
+}
+
+function showErrorMessage(message) {
+    const errorModal = document.getElementById('error-modal');
+    if (errorModal) {
+        const messageEl = errorModal.querySelector('#error-message');
+        if (messageEl) messageEl.innerText = message;
+        errorModal.classList.remove('hidden');
+    }
+}
+
+function showNetworkErrorModal() {
+    const networkErrorModal = document.getElementById('network-error-modal');
+    if (networkErrorModal) {
+        networkErrorModal.classList.remove('hidden');
+    }
+}
+
+function showLoginRequiredModal() {
+    const loginRequiredModal = document.getElementById('login-required-modal');
+    if (loginRequiredModal) {
+        loginRequiredModal.classList.remove('hidden');
+    }
+}
+
+function closeSuccessModal() {
+    const successModal = document.getElementById('success-modal');
+    if (successModal) {
+        successModal.classList.add('hidden');
+    }
+}
+
+function closeErrorModal() {
+    const errorModal = document.getElementById('error-modal');
+    if (errorModal) {
+        errorModal.classList.add('hidden');
+    }
+}
+
+function closeNetworkErrorModal() {
+    const networkErrorModal = document.getElementById('network-error-modal');
+    if (networkErrorModal) {
+        networkErrorModal.classList.add('hidden');
+    }
+}
+
+function closeLoginRequiredModal() {
+    const loginRequiredModal = document.getElementById('login-required-modal');
+    if (loginRequiredModal) {
+        loginRequiredModal.classList.add('hidden');
+    }
+}
+
 function showStationDetails(data) {
     currentStation = data;
-    document.getElementById('station-name').innerText = data.name;
-    document.getElementById('station-brand').innerText = data.brand;
-    document.getElementById('station-address').innerText = data.address || 'Address not available';
+    
+    // Check if elements exist before trying to access them
+    const stationNameEl = document.getElementById('station-name');
+    const stationBrandEl = document.getElementById('station-brand');
+    const stationAddressEl = document.getElementById('station-address');
+    
+    if (!stationNameEl || !stationBrandEl || !stationAddressEl) {
+        console.error('Required DOM elements not found:', {
+            stationName: stationNameEl,
+            stationBrand: stationBrandEl,
+            stationAddress: stationAddressEl
+        });
+        return;
+    }
+    
+    stationNameEl.innerText = data.name;
+    stationBrandEl.innerText = data.brand;
+    stationAddressEl.innerText = data.address || 'Address not available';
+    // Check if map exists before trying to access it
+    if (!window.map || !window.map.getCenter) {
+        console.error('Map not initialized');
+        return;
+    }
+    
     const userLat = window.map.getCenter().lat;
     const userLng = window.map.getCenter().lng;
     const distance = calculateDistance(userLat, userLng, data.lat, data.lng);
-    document.getElementById('distance-value').innerText = `${distance} km`;
+    
+    const distanceValueEl = document.getElementById('distance-value');
+    if (!distanceValueEl) {
+        console.error('Distance value element not found');
+        return;
+    }
+    distanceValueEl.innerText = `${distance} km`;
     const fuels = [
         { label: 'Diesel', price: data.prices.diesel, color: 'nozzle-diesel' },
         { label: 'Unleaded 91', price: data.prices.u91, color: 'nozzle-u91' },
         { label: 'Premium 95', price: data.prices.u95, color: 'nozzle-u95' }
     ];
-    document.getElementById('price-list').innerHTML = fuels.map(f => `
+    
+    const priceListEl = document.getElementById('price-list');
+    if (!priceListEl) {
+        console.error('Price list element not found');
+        return;
+    }
+    
+    priceListEl.innerHTML = fuels.map(f => `
         <div class="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
             <div class="flex items-center gap-3">
                 <div class="w-1.5 h-10 ${f.color} rounded-full"></div>
@@ -42,26 +137,41 @@ function showStationDetails(data) {
                     Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111 < 1
                 )
                 .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            if (stationSubmissions.length > 1) {
-                document.getElementById('history-list').innerHTML = stationSubmissions.slice(1, 4).map(h => `
-                    <div class="p-3 bg-gray-50 rounded-xl">
-                        <p class="text-xs text-gray-500 mb-1">
-                            ${getTimeAgo(new Date(h.timestamp))}
-                            ${h.flagged ? '<span class="text-red-600 font-bold ml-2">⚠️ Flagged as Fake</span>' : ''}
-                        </p>
-                        <p class="text-sm font-bold">
-                            Diesel: ₱${h.prices.diesel.toFixed(2)} | 91: ₱${h.prices.u91.toFixed(2)} | 95: ₱${h.prices.u95.toFixed(2)}
-                        </p>
-                    </div>
-                `).join('');
-                document.getElementById('price-history').style.display = 'block';
-            } else {
-                document.getElementById('price-history').style.display = 'none';
+            
+            const historyListEl = document.getElementById('history-list');
+            const priceHistoryEl = document.getElementById('price-history');
+            
+            if (historyListEl && priceHistoryEl) {
+                if (stationSubmissions.length > 1) {
+                    historyListEl.innerHTML = stationSubmissions.slice(1, 4).map(h => `
+                        <div class="p-3 bg-gray-50 rounded-xl">
+                            <p class="text-xs text-gray-500 mb-1">
+                                ${getTimeAgo(new Date(h.timestamp))}
+                                ${h.flagged ? '<span class="text-red-600 font-bold ml-2">⚠️ Flagged as Fake</span>' : ''}
+                            </p>
+                            <p class="text-sm font-bold">
+                                Diesel: ₱${h.prices.diesel.toFixed(2)} | 91: ₱${h.prices.u91.toFixed(2)} | 95: ₱${h.prices.u95.toFixed(2)}
+                            </p>
+                        </div>
+                    `).join('');
+                    priceHistoryEl.style.display = 'block';
+                } else {
+                    priceHistoryEl.style.display = 'none';
+                }
             }
+        })
+        .catch(err => {
+            console.error('Error fetching price history:', err);
         });
     const statusText = document.getElementById('status-text');
     const lastUpdate = document.getElementById('last-update');
     const voteButtons = document.getElementById('vote-buttons');
+    
+    if (!statusText || !lastUpdate || !voteButtons) {
+        console.error('Status elements not found');
+        return;
+    }
+    
     if (data.submitted) {
         const { confirmScore, disputeScore, timestamp } = data.submitted;
         const score = confirmScore - disputeScore;
@@ -77,11 +187,11 @@ function showStationDetails(data) {
             fetch(`${config.API_BASE_URL}/api/user-score?username=` + encodeURIComponent(data.submitted.username))
                 .then(res => res.json())
                 .then(userData => {
-                    document.getElementById('status-text').innerText += ` | Submitter Trust Score: ${userData.score || 1}`;
+                    statusText.innerText += ` | Submitter Trust Score: ${userData.score || 1}`;
                 });
         }
         if (data.submitted && data.submitted.flagged) {
-            document.getElementById('status-text').innerText += ' | ⚠️ Flagged as Fake by Admin';
+            statusText.innerText += ' | ⚠️ Flagged as Fake by Admin';
         }
     } else {
         statusText.innerText = 'Status: No data';
@@ -89,60 +199,83 @@ function showStationDetails(data) {
         voteButtons.style.display = 'none';
     }
     if (window.isAdmin) {
-        document.getElementById('admin-tools').style.display = 'block';
-        document.getElementById('flag-btn').onclick = () => {
-            fetch(`${config.API_BASE_URL}/api/flag-price`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stationName: data.name,
-                    lat: data.lat,
-                    lng: data.lng,
-                    adminUsername: username
-                })
-            }).then(res => res.json()).then(result => {
-                showSuccessMessage(result.message || 'Submission flagged successfully');
-                fetchGasStations();
-            });
-        };
-        document.getElementById('remove-btn').onclick = () => {
-            fetch(`${config.API_BASE_URL}/api/remove-price`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stationName: data.name,
-                    lat: data.lat,
-                    lng: data.lng,
-                    adminUsername: username
-                })
-            }).then(res => res.json()).then(result => {
-                showSuccessMessage(result.message || 'Submission removed successfully');
-                fetchGasStations();
-            });
-        };
+        const adminToolsEl = document.getElementById('admin-tools');
+        const flagBtnEl = document.getElementById('flag-btn');
+        const removeBtnEl = document.getElementById('remove-btn');
+        
+        if (adminToolsEl && flagBtnEl && removeBtnEl) {
+            adminToolsEl.style.display = 'block';
+            flagBtnEl.onclick = () => {
+                fetch(`${config.API_BASE_URL}/api/flag-price`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stationName: data.name,
+                        lat: data.lat,
+                        lng: data.lng,
+                        adminUsername: username
+                    })
+                }).then(res => res.json()).then(result => {
+                    showSuccessMessage(result.message || 'Submission flagged successfully');
+                    fetchGasStations();
+                });
+            };
+            removeBtnEl.onclick = () => {
+                fetch(`${config.API_BASE_URL}/api/remove-price`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stationName: data.name,
+                        lat: data.lat,
+                        lng: data.lng,
+                        adminUsername: username
+                    })
+                }).then(res => res.json()).then(result => {
+                    showSuccessMessage(result.message || 'Submission removed successfully');
+                    fetchGasStations();
+                });
+            };
+        }
     } else {
-        document.getElementById('admin-tools').style.display = 'none';
+        const adminToolsEl = document.getElementById('admin-tools');
+        if (adminToolsEl) {
+            adminToolsEl.style.display = 'none';
+        }
     }
     if (data.submitted && data.submitted.photoUrl) {
-        document.getElementById('station-address').innerHTML += `<br><img src="${data.submitted.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px; margin-top:8px;">`;
+        const stationAddressEl = document.getElementById('station-address');
+        if (stationAddressEl) {
+            stationAddressEl.innerHTML += `<br><img src="${data.submitted.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px; margin-top:8px;">`;
+        }
     }
     
     // Mobile-first panel behavior
     const panel = document.getElementById('info-panel');
     const mapContainer = document.getElementById('map');
-    const isMobile = window.innerWidth < 768;
+    
+    if (!panel) {
+        console.error('Info panel element not found');
+        return;
+    }
     
     panel.classList.remove('hidden');
     
-    if (isMobile) {
-        // On mobile, slide in the full-screen panel and hide the map
-        setTimeout(() => {
-            panel.classList.add('active');
-            // Add class to map to hide it when panel is open on mobile
-            mapContainer.classList.add('map-with-panel-open');
-        }, 10);
+    if (mapContainer) {
+        const isMobile = window.innerWidth < 768;
+        
+        if (isMobile) {
+            // On mobile, slide in the full-screen panel and hide the map
+            setTimeout(() => {
+                panel.classList.add('active');
+                // Add class to map to hide it when panel is open on mobile
+                mapContainer.classList.add('map-with-panel-open');
+            }, 10);
+        } else {
+            // On desktop, use the original sliding up behavior
+            setTimeout(() => panel.classList.add('active'), 10);
+        }
     } else {
-        // On desktop, use the original sliding up behavior
+        // Fallback: just show the panel without map manipulation
         setTimeout(() => panel.classList.add('active'), 10);
     }
 }
@@ -157,7 +290,13 @@ export async function vote(type) {
     }
 
     // 2. Get the station details
-    const stationName = document.getElementById('station-name').innerText.toLowerCase().trim();
+    const stationNameEl = document.getElementById('station-name');
+    if (!stationNameEl) {
+        console.error('Station name element not found for voting');
+        return;
+    }
+    
+    const stationName = stationNameEl.innerText.toLowerCase().trim();
     
     // Ensure currentStation or map context is available
     const lat = window.currentStation ? window.currentStation.lat : window.map.getCenter().lat;
@@ -260,4 +399,4 @@ function submitPrices() {
     });
 }
 
-export { showStationDetails, submitPrices };
+export { showStationDetails, submitPrices, showSuccessMessage, showErrorMessage, showNetworkErrorModal, showLoginRequiredModal, closeSuccessModal, closeErrorModal, closeNetworkErrorModal, closeLoginRequiredModal };
