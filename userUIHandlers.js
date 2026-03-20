@@ -1,7 +1,9 @@
 // UI handler for User Rankings modal
+import config from './config.js';
+
 function showRankings() {
     document.getElementById('user-rankings-modal').classList.remove('hidden');
-    fetch('http://localhost:3000/api/prices?approved=true')
+    fetch(`${config.API_BASE_URL}/api/prices?approved=true`)
         .then(res => res.json())
         .then(submissions => {
             const scores = {};
@@ -10,7 +12,7 @@ function showRankings() {
                 scores[sub.username] += 1;
             });
             Promise.all(Object.keys(scores).map(username =>
-                fetch(`http://localhost:3000/api/user-score?username=${encodeURIComponent(username)}`)
+                fetch(`${config.API_BASE_URL}/api/user-score?username=${encodeURIComponent(username)}`)
                     .then(res => res.json())
                     .then(({ score, isAdmin }) => ({ username, score, isAdmin }))
             )).then(users => {
@@ -80,7 +82,7 @@ function loadStationRankings(fuelType) {
         list.innerHTML = '<div class="flex justify-center p-4"><div class="loader"></div></div>';
     }
     
-    fetch(`http://localhost:3000/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=20`)
+    fetch(`${config.API_BASE_URL}/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=20`)
         .then(res => res.json())
         .then(data => {
             if (list && data.rankings) {
@@ -176,7 +178,7 @@ function showUserProfile() {
     const userInfo = localStorage.getItem('username') || 'Guest';
 
     // 3. Fetch User Score and Badge
-    fetch(`http://localhost:3000/api/user-score?username=${encodeURIComponent(userInfo)}`)
+    fetch(`${config.API_BASE_URL}/api/user-score?username=${encodeURIComponent(userInfo)}`)
         .then(res => res.json())
         .then(({ score, isAdmin }) => {
             // Ensure getBadge function exists in your scope
@@ -198,7 +200,7 @@ function showUserProfile() {
     if (historyContainer) {
         historyContainer.innerHTML = '<div class="p-4 text-center"><div class="loader mx-auto"></div></div>'; // Loading state
         
-        fetch(`http://localhost:3000/api/user-submissions?username=${encodeURIComponent(userInfo)}`)
+        fetch(`${config.API_BASE_URL}/api/user-submissions?username=${encodeURIComponent(userInfo)}`)
             .then(res => res.json())
             .then(userSubmissions => {
                 if (!userSubmissions || userSubmissions.length === 0) {

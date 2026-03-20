@@ -3,6 +3,9 @@
 // Global variable to store the currently selected station
 let currentStation = null;
 
+// Import config for API URLs
+import config from './config.js';
+
 function showStationDetails(data) {
     currentStation = data;
     document.getElementById('station-name').innerText = data.name;
@@ -26,7 +29,7 @@ function showStationDetails(data) {
             <span class="text-2xl font-black text-gray-900">₱${f.price.toFixed(2)}</span>
         </div>
     `).join('');
-    fetch('http://localhost:3000/api/prices')
+    fetch(`${config.API_BASE_URL}/api/prices`)
         .then(res => res.json())
         .then(submittedPrices => {
             const name = data.name;
@@ -71,7 +74,7 @@ function showStationDetails(data) {
         lastUpdate.innerText = `Updated ${timeAgo}`;
         voteButtons.style.display = 'flex';
         if (data.submitted && data.submitted.username) {
-            fetch('http://localhost:3000/api/user-score?username=' + encodeURIComponent(data.submitted.username))
+            fetch(`${config.API_BASE_URL}/api/user-score?username=` + encodeURIComponent(data.submitted.username))
                 .then(res => res.json())
                 .then(userData => {
                     document.getElementById('status-text').innerText += ` | Submitter Trust Score: ${userData.score || 1}`;
@@ -88,7 +91,7 @@ function showStationDetails(data) {
     if (window.isAdmin) {
         document.getElementById('admin-tools').style.display = 'block';
         document.getElementById('flag-btn').onclick = () => {
-            fetch('http://localhost:3000/api/flag-price', {
+            fetch(`${config.API_BASE_URL}/api/flag-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -103,7 +106,7 @@ function showStationDetails(data) {
             });
         };
         document.getElementById('remove-btn').onclick = () => {
-            fetch('http://localhost:3000/api/remove-price', {
+            fetch(`${config.API_BASE_URL}/api/remove-price`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -162,7 +165,7 @@ export async function vote(type) {
     const lng = window.currentStation ? window.currentStation.lng : window.map.getCenter().lng;
 
     try {
-        const response = await fetch('http://localhost:3000/api/vote', {
+        const response = await fetch(`${config.API_BASE_URL}/api/vote`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stationName, type, username, lat, lng })
@@ -217,7 +220,7 @@ function submitPrices() {
     if (photoInput.files && photoInput.files[0]) {
         formData.append('photo', photoInput.files[0]);
     }
-    fetch('http://localhost:3000/api/prices', {
+    fetch(`${config.API_BASE_URL}/api/prices`, {
         method: 'POST',
         body: formData
     })

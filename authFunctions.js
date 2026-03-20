@@ -1,4 +1,5 @@
 // UI handler functions for login/register modals
+import config from './config.js';
 
 function login() {
     const username = document.getElementById('login-username').value;
@@ -7,7 +8,7 @@ function login() {
         alert('Please enter username and password.');
         return;
     }
-    fetch('http://localhost:3000/api/login', {
+    fetch(`${config.API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -42,7 +43,7 @@ function register() {
         alert('Passwords do not match.');
         return;
     }
-    fetch('http://localhost:3000/api/register', {
+    fetch(`${config.API_BASE_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

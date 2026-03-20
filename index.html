@@ -388,6 +388,7 @@
         // Remove the touchstart event listener that was blocking marker interactions
         // Markers now handle touchend events directly for better mobile compatibility
     </script>
+    <script type="module" src="./config.js"></script>
     <script type="module" src="./mapFunctions.js"></script>
     <script type="module" src="./markerFunctions.js"></script>
     <script type="module" src="./utilFunctions.js"></script>
@@ -455,7 +456,7 @@
             list.innerHTML = '<div class="flex justify-center p-4"><div class="loader"></div></div>';
         }
         
-        fetch(`http://localhost:3000/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=20`)
+        fetch(`${config.API_BASE_URL}/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=20`)
             .then(res => res.json())
             .then(data => {
                 if (list && data.rankings) {
@@ -547,7 +548,7 @@
             suggestionsBox.innerHTML = '';
             return;
         }
-        fetch(`http://localhost:3000/api/station-suggestions?query=${encodeURIComponent(input)}`)
+        fetch(`${config.API_BASE_URL}/api/station-suggestions?query=${encodeURIComponent(input)}`)
             .then(res => res.json())
             .then(stations => {
                 if (stations.length === 0) {
@@ -577,7 +578,7 @@
         return;
     }
 
-    fetch(`http://localhost:3000/api/user-score?username=${encodeURIComponent(username)}`)
+    fetch(`${config.API_BASE_URL}/api/user-score?username=${encodeURIComponent(username)}`)
         .then(res => res.json())
         .then(({ isAdmin }) => {
             // Set global flag so stationDetails.js knows the user is an admin

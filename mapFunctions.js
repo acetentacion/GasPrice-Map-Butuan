@@ -1,6 +1,9 @@
 // mapFunctions.js
 // Contains map-related functions extracted from index.html
 
+// Import config for API URLs
+import config from './config.js';
+
 async function handleSearch() {
     const query = document.getElementById('city-search').value;
     if (!query) return;
@@ -56,7 +59,7 @@ function vote(type) {
             const lat = currentStation ? currentStation.lat : map.getCenter().lat;
             const lng = currentStation ? currentStation.lng : map.getCenter().lng;
             
-            fetch('http://localhost:3000/api/vote', {
+            fetch(`${config.API_BASE_URL}/api/vote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ stationName, type, username, lat, lng })
