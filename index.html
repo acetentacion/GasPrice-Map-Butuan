@@ -193,11 +193,6 @@
                         <button onclick="setFuelFilter('u91')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-green-500 hover:text-green-600 transition-colors" data-fuel="u91">Unleaded 91</button>
                         <button onclick="setFuelFilter('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Unleaded 95</button>
                     </div>
-                    <select id="sort-filter" class="p-3 border rounded" onchange="sortStations()">
-                        <option value="name">Sort by Name</option>
-                        <option value="price">Sort by Price</option>
-                        <option value="distance">Sort by Distance</option>
-                    </select>
                 </div>
             </div>
             
@@ -587,7 +582,6 @@
     let currentCityLat = null;
     let currentCityLng = null;
     let currentFilter = 'all';
-    let currentSort = 'name';
 
     window.showStationSuggestions = function() {
         const input = document.getElementById('search-station').value.trim();
@@ -634,16 +628,11 @@
         });
     };
 
-    window.sortStations = function() {
-        currentSort = document.getElementById('sort-filter').value;
-        renderStationList();
-    };
-
     function renderStationList() {
         const list = document.getElementById('station-list');
         const count = document.getElementById('station-count');
         
-        console.log('renderStationList called with filter:', currentFilter, 'sort:', currentSort);
+        console.log('renderStationList called with filter:', currentFilter);
         console.log('allStations:', allStations);
         
         let filteredStations = allStations;
@@ -655,35 +644,6 @@
                 return station.prices && station.prices[currentFilter] !== undefined;
             });
         }
-
-        // Apply sorting
-        filteredStations.sort((a, b) => {
-            switch (currentSort) {
-                case 'name':
-                    return a.stationName.localeCompare(b.stationName);
-                case 'price':
-                    const aPrice = Math.min(
-                        a.prices?.diesel || Infinity,
-                        a.prices?.u91 || Infinity,
-                        a.prices?.u95 || Infinity
-                    );
-                    const bPrice = Math.min(
-                        b.prices?.diesel || Infinity,
-                        b.prices?.u91 || Infinity,
-                        b.prices?.u95 || Infinity
-                    );
-                    return aPrice - bPrice;
-                case 'distance':
-                    if (currentCityLat && currentCityLng) {
-                        const aDist = calculateDistance(currentCityLat, currentCityLng, a.lat, a.lng);
-                        const bDist = calculateDistance(currentCityLat, currentCityLng, b.lat, b.lng);
-                        return aDist - bDist;
-                    }
-                    return 0;
-                default:
-                    return 0;
-            }
-        });
 
         if (filteredStations.length === 0) {
             list.innerHTML = '<p class="text-gray-500 text-center py-8">No stations found. Try adjusting your filters.</p>';
