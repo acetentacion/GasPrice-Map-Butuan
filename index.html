@@ -385,13 +385,8 @@
         window.markerGroup = L.layerGroup().addTo(window.map);
         
         // Mobile touch event enhancement
-        // Add touch event support to the map container to prevent conflicts
-        document.getElementById('map').addEventListener('touchstart', function(e) {
-            // Allow touch events to pass through to markers
-            if (e.target.closest('.leaflet-marker-icon')) {
-                e.preventDefault();
-            }
-        }, { passive: false });
+        // Remove the touchstart event listener that was blocking marker interactions
+        // Markers now handle touchend events directly for better mobile compatibility
     </script>
     <script type="module" src="./mapFunctions.js"></script>
     <script type="module" src="./markerFunctions.js"></script>

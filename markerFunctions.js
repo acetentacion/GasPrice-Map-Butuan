@@ -58,7 +58,7 @@ async function renderMarkers(stations) {
         });
         const marker = L.marker([lat, lon], { icon }).addTo(markerGroup);
         // Add both click and touch event handlers for mobile compatibility
-        marker.on('click touchstart', () => {
+        marker.on('click touchend', () => {
             showStationDetails({
                 name: name,
                 brand: brand,
@@ -85,7 +85,7 @@ async function renderMarkers(stations) {
             };
             const marker = L.marker([s.lat, s.lon]).addTo(markerGroup);
             // Add both click and touch event handlers for mobile compatibility
-            marker.on('click touchstart', () => {
+            marker.on('click touchend', () => {
                 showStationDetails({
                     name: s.tags.name,
                     brand: s.tags.brand,
@@ -113,7 +113,7 @@ function renderMarkersFromBackend(prices) {
         });
         const marker = L.marker([sub.lat, sub.lng], { icon }).addTo(markerGroup);
         // Add both click and touch event handlers for mobile compatibility
-        marker.on('click touchstart', () => {
+        marker.on('click touchend', () => {
             showStationDetails({
                 name: sub.stationName,
                 brand: sub.brand,
