@@ -615,6 +615,7 @@
     };
 
     window.setFuelFilter = function(fuelType) {
+        console.log('setFuelFilter called with:', fuelType);
         currentFilter = fuelType;
         renderStationList();
         
@@ -642,11 +643,15 @@
         const list = document.getElementById('station-list');
         const count = document.getElementById('station-count');
         
+        console.log('renderStationList called with filter:', currentFilter, 'sort:', currentSort);
+        console.log('allStations:', allStations);
+        
         let filteredStations = allStations;
 
         // Apply fuel filter
         if (currentFilter !== 'all') {
             filteredStations = filteredStations.filter(station => {
+                console.log('Filtering station:', station.stationName, 'prices:', station.prices, 'currentFilter:', currentFilter);
                 return station.prices && station.prices[currentFilter] !== undefined;
             });
         }
