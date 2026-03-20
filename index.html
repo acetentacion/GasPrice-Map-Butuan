@@ -187,12 +187,12 @@
                     <div id="station-suggestions" class="absolute bg-white border rounded shadow z-50" style="display:none; max-height:180px; overflow-y:auto; width:100%;"></div>
                 </div>
                 <div class="flex gap-2">
-                    <select id="fuel-filter" class="p-3 border rounded" onchange="filterStations()">
-                        <option value="all">All Fuels</option>
-                        <option value="diesel">Diesel</option>
-                        <option value="u91">Unleaded 91</option>
-                        <option value="u95">Unleaded 95</option>
-                    </select>
+                    <div class="flex gap-2">
+                        <button onclick="setFuelFilter('all')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-colors" data-fuel="all">All Fuels</button>
+                        <button onclick="setFuelFilter('diesel')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-colors" data-fuel="diesel">Diesel</button>
+                        <button onclick="setFuelFilter('u91')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-green-500 hover:text-green-600 transition-colors" data-fuel="u91">Unleaded 91</button>
+                        <button onclick="setFuelFilter('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Unleaded 95</button>
+                    </div>
                     <select id="sort-filter" class="p-3 border rounded" onchange="sortStations()">
                         <option value="name">Sort by Name</option>
                         <option value="price">Sort by Price</option>
@@ -614,9 +614,23 @@
             });
     };
 
-    window.filterStations = function() {
-        currentFilter = document.getElementById('fuel-filter').value;
+    window.setFuelFilter = function(fuelType) {
+        currentFilter = fuelType;
         renderStationList();
+        
+        // Update button styles to show which one is selected
+        document.querySelectorAll('.fuel-btn').forEach(btn => {
+            const isActive = btn.getAttribute('data-fuel') === fuelType;
+            if (isActive) {
+                btn.style.borderColor = '#3b82f6';
+                btn.style.color = '#2563eb';
+                btn.style.backgroundColor = '#eff6ff';
+            } else {
+                btn.style.borderColor = '#e5e7eb';
+                btn.style.color = '#6b7280';
+                btn.style.backgroundColor = 'transparent';
+            }
+        });
     };
 
     window.sortStations = function() {
@@ -915,6 +929,21 @@
         }
         
         updateAdminUI();
+        
+        // Initialize button styles to show "All Fuels" as selected by default
+        document.querySelectorAll('.fuel-btn').forEach(btn => {
+            const isActive = btn.getAttribute('data-fuel') === 'all';
+            if (isActive) {
+                btn.style.borderColor = '#3b82f6';
+                btn.style.color = '#2563eb';
+                btn.style.backgroundColor = '#eff6ff';
+            } else {
+                btn.style.borderColor = '#e5e7eb';
+                btn.style.color = '#6b7280';
+                btn.style.backgroundColor = 'transparent';
+            }
+        });
+        
         fetchGasStations().then(stations => {
             allStations = stations;
             renderStationList();
