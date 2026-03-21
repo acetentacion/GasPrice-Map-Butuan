@@ -49,6 +49,130 @@
             border: 2px solid #ef4444;
             background: #fee2e2;
         }
+        
+        /* Current Location Marker Styles */
+        .current-location-marker {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            background: #3b82f6;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+        
+        .current-location-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            z-index: 1001;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+        
+        .current-location-accuracy {
+            position: absolute;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            border-radius: 50%;
+            z-index: 999;
+            pointer-events: none;
+        }
+        
+        .current-location-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3b82f6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0.9;
+        }
+        
+        .location-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .location-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            min-width: 120px;
+        }
+        
+        .location-btn:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+        
+        .location-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .location-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .location-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .location-status.show {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -115,6 +239,28 @@
     <!-- Map -->
     <div id="map" class="relative">
         <div id="map-loader" class="loader absolute top-4 right-4 hidden"></div>
+        
+        <!-- Location Controls -->
+        <div class="location-controls">
+            <button id="locate-btn" class="location-btn" onclick="useGPS()" title="Find my location">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>My Location</span>
+            </button>
+            <button id="follow-btn" class="location-btn" onclick="toggleFollowMode()" title="Toggle follow mode">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Follow</span>
+            </button>
+        </div>
+        
+        <!-- Location Status -->
+        <div id="location-status" class="location-status">
+            <span id="location-status-text">Ready</span>
+        </div>
     </div>
 
     <!-- Info Panel -->
@@ -392,6 +538,9 @@
     // Station Rankings functions
     window.showStationRankings = showStationRankings;
     window.closeStationRankings = closeStationRankings;
+    
+    // Location tracking functions
+    window.initLocationTracking = initLocationTracking;
     
     // Load station rankings function (defined in userUIHandlers.js but needs global access)
     window.loadStationRankings = function(fuelType) {
@@ -892,6 +1041,11 @@
             selectCity(parseFloat(cityLat), parseFloat(cityLng));
         } else {
             document.getElementById('city-modal').style.display = 'flex';
+        }
+        
+        // Initialize location tracking functionality
+        if (typeof initLocationTracking === 'function') {
+            initLocationTracking();
         }
         
         fetchGasStations().then((stations) => {
