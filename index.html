@@ -867,9 +867,13 @@
             // Calculate distances for both stations
             let distA, distB;
             
-            // Use user's current tracked location if available, otherwise fall back to city coordinates
+            // Use user's current location FIRST, then fall back to other options
             let userLat, userLng;
-            if (window.currentLocationMarker) {
+            if (window.userCurrentLat && window.userCurrentLng) {
+                // Use the location we got during loading
+                userLat = window.userCurrentLat;
+                userLng = window.userCurrentLng;
+            } else if (window.currentLocationMarker) {
                 const currentLatLng = window.currentLocationMarker.getLatLng();
                 userLat = currentLatLng.lat;
                 userLng = currentLatLng.lng;
