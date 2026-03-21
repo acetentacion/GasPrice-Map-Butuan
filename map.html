@@ -689,6 +689,31 @@
         }, 8000);
     };
 
+    // Function to open station modal for new submission when no data exists
+    window.openStationModalForNewSubmission = function(stationName, lat, lng) {
+        // Create a mock station object for the modal
+        const mockStation = {
+            stationName: stationName,
+            lat: lat,
+            lng: lng,
+            brand: 'Unknown',
+            address: 'Location: ' + lat.toFixed(4) + ', ' + lng.toFixed(4),
+            prices: [],
+            priceHistory: [],
+            verificationStatus: 'pending',
+            username: 'Community',
+            timestamp: new Date().toISOString()
+        };
+
+        // Set the current station globally so showStationDetails can access it
+        window.currentStation = mockStation;
+        
+        // Open the modal with station details
+        if (window.showStationDetails) {
+            window.showStationDetails(mockStation);
+        }
+    };
+
     // --- 4. Initialization ---
     window.brandLogos = {
         'shell': '/logos/shell.png',
@@ -739,6 +764,8 @@
             // Check if stations is an array and has data
             if (!Array.isArray(stations) || stations.length === 0) {
                 console.warn('No stations data available for auto-open');
+                // Still open the modal for the user to submit prices
+                openStationModalForNewSubmission(stationName, lat, lng);
                 return;
             }
             
@@ -761,36 +788,8 @@
                 }
             } else {
                 console.warn('Station not found for auto-open:', stationName);
-                // Still fly to the location even if we can't find the station data
-                // Show a helpful message to the user
-                const toast = document.createElement('div');
-                toast.className = 'fixed top-4 left-4 right-4 bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl shadow-lg z-50 max-w-md mx-auto';
-                toast.innerHTML = `
-                    <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="font-bold text-lg mb-1">Station Found</h3>
-                            <p class="text-sm text-blue-700 mb-3">We've navigated to ${stationName} but couldn't find detailed price information. The station may not have recent price submissions.</p>
-                            <div class="flex gap-2">
-                                <button onclick="this.closest('.fixed').remove()" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">Close</button>
-                            </div>
-                        </div>
-                        <button onclick="this.closest('.fixed').remove()" class="text-blue-400 hover:text-blue-600 text-xl">×</button>
-                    </div>
-                `;
-                
-                document.body.appendChild(toast);
-                
-                // Auto-remove after 6 seconds
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                }, 6000);
+                // Open modal for new submission since station doesn't exist in database
+                openStationModalForNewSubmission(stationName, lat, lng);
             }
 
         } catch (error) {
