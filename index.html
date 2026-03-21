@@ -1204,7 +1204,7 @@
         }
     }
 
-    async function initializeApplication() {
+async function initializeApplication() {
         try {
             updateLoadingProgress('step-auth', 10);
             
@@ -1228,18 +1228,23 @@
             
             updateLoadingProgress('step-stations', 30);
             
-            // Step 2: Load gas stations
+            // Step 2: Get user's current location
+            await getCurrentLocation();
+            
+            updateLoadingProgress('step-stations', 50);
+            
+            // Step 3: Load gas stations
             const stations = await fetchGasStations();
             allStations = stations;
             
             updateLoadingProgress('step-admin', 70);
             
-            // Step 3: Update admin UI and permissions
+            // Step 4: Update admin UI and permissions
             updateAdminUI();
             
             updateLoadingProgress('step-ui', 90);
             
-            // Step 4: Initialize UI state
+            // Step 5: Initialize UI state
             initializeUIState();
             
             updateLoadingProgress('step-ui', 100);
@@ -1253,6 +1258,66 @@
             hideLoadingScreen();
             showErrorMessage('Failed to load application. Please refresh the page.');
         }
+    }
+async function getCurrentLocation() {
+        return new Promise((resolve, reject) => {
+            // Check if geolocation is available
+            if (!navigator.geolocation) {
+                console.warn('Geolocation is not supported by this browser');
+                resolve();
+                return;
+            }
+            
+            // Update loading step indicator
+            const stepStations = document.getElementById('step-stations');
+            if (stepStations) {
+                stepStations.querySelector('span').innerText = 'Getting your location';
+            }
+            
+            // Try to get current location
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    
+                    console.log('User location obtained:', { lat, lng, accuracy });
+                    
+                    // Store location in global variables for use by other functions
+                    window.userCurrentLat = lat;
+                    window.userCurrentLng = lng;
+                    window.userCurrentAccuracy = accuracy;
+                    
+                    // Store in localStorage for persistence
+                    localStorage.setItem('userCurrentLat', lat.toString());
+                    localStorage.setItem('userCurrentLng', lng.toString());
+                    localStorage.setItem('userCurrentAccuracy', accuracy.toString());
+                    
+                    // Update step indicator
+                    if (stepStations) {
+                        stepStations.querySelector('span').innerText = 'Location obtained';
+                    }
+                    
+                    resolve({ lat, lng, accuracy });
+                },
+                (error) => {
+                    console.warn('Failed to get user location:', error);
+                    
+                    // Update step indicator to show location not available
+                    if (stepStations) {
+                        stepStations.querySelector('span').innerText = 'Location unavailable';
+                    }
+                    
+                    // Still resolve - we can continue without location
+                    resolve();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 600000 // 10 minutes cache
+                }
+            );
+        });
     }
 
     function initializeUIState() {
