@@ -10,7 +10,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const upload = multer({ dest: path.join(__dirname, 'uploads/') });
 
-// MongoDB connection
 const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://edgieace_db_user:Wildflowers-01@cluster0.w6ycdks.mongodb.net/gasprice?retryWrites=true&w=majority';
 mongoose.connect(mongoUri)
     .then(() => {
@@ -20,7 +19,6 @@ mongoose.connect(mongoUri)
         console.error('MongoDB connection error:', err);
     });
 
-// CORS Configuration
 const corsOrigins = process.env.CORS_ORIGINS 
     ? process.env.CORS_ORIGINS.split(',').map(url => url.trim())
     : [
@@ -31,10 +29,8 @@ const corsOrigins = process.env.CORS_ORIGINS
         'https://gasprice-map-butuan.onrender.com'
     ];
 
-// Middleware
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         
         if (corsOrigins.indexOf(origin) !== -1) {
@@ -45,9 +41,8 @@ app.use(cors({
     }
 }));
 app.use(bodyParser.json());
-app.use(express.static(__dirname)); // Serve static files from current directory
+app.use(express.static(__dirname));
 
-// MongoDB Schemas
 const PriceSchema = new mongoose.Schema({
     stationName: String,
     prices: {
@@ -84,7 +79,6 @@ const StationSchema = new mongoose.Schema({
 });
 const Station = mongoose.model('Station', StationSchema);
 
-// POST /api/register - Register a new user
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -99,7 +93,6 @@ app.post('/api/register', async (req, res) => {
     res.json({ message: 'Registration successful' });
 });
 
-// POST /api/login - Login user
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -112,7 +105,6 @@ app.post('/api/login', async (req, res) => {
     res.json({ message: 'Login successful', username });
 });
 
-// POST /api/prices - Store submitted prices
 app.post('/api/prices', upload.single('photo'), async (req, res) => {
     const { stationName, diesel, u91, u95, timestamp, username, lat, lng } = req.body;
     if (!stationName || !diesel || !u91 || !u95 || !timestamp || !username || lat == null || lng == null) {
@@ -139,12 +131,9 @@ app.post('/api/prices', upload.single('photo'), async (req, res) => {
     res.json({ message: 'Price submitted successfully, pending admin approval.' });
 });
 
-// Serve uploaded photos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// Serve logo folder
 app.use('/logos', express.static(path.join(__dirname, 'logos')));
 
-// POST /api/vote - Handle confirm/dispute votes with weighted scores
 app.post('/api/vote', async (req, res) => {
     const { stationName, type, username, lat, lng } = req.body;
     if (!stationName || !['confirm', 'dispute'].includes(type) || !username || lat == null || lng == null) {
@@ -153,7 +142,6 @@ app.post('/api/vote', async (req, res) => {
     const user = await User.findOne({ username });
     const voterScore = user?.score || 1;
 
-    // Find the closest matching submission within ~1 km
     const submissions = await Price.find({ stationName: new RegExp(`^${stationName}$`, 'i') });
     let closest = null;
     let minDistance = Infinity;
@@ -189,7 +177,6 @@ app.post('/api/vote', async (req, res) => {
     }
 });
 
-// POST /api/flag-price - Admin flags a price as fake/disputed
 app.post('/api/flag-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
     const admin = await User.findOne({ username: adminUsername });
@@ -210,7 +197,6 @@ app.post('/api/flag-price', async (req, res) => {
     }
 });
 
-// POST /api/remove-price - Admin removes a price submission
 app.post('/api/remove-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
     const admin = await User.findOne({ username: adminUsername });
@@ -229,7 +215,6 @@ app.post('/api/remove-price', async (req, res) => {
     }
 });
 
-// POST /api/approve-price - Approve a submission
 app.post('/api/approve-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
     const admin = await User.findOne({ username: adminUsername });
@@ -251,7 +236,6 @@ app.post('/api/approve-price', async (req, res) => {
     }
 });
 
-// POST /api/reject-price - Reject (delete) a submission
 app.post('/api/reject-price', async (req, res) => {
     const { stationName, lat, lng, adminUsername } = req.body;
     const admin = await User.findOne({ username: adminUsername });
@@ -271,17 +255,14 @@ app.post('/api/reject-price', async (req, res) => {
     }
 });
 
-// GET /api/prices - Retrieve all submissions
 app.get('/api/prices', async (req, res) => {
     const { stationName, minPrice, maxPrice, fuelType, approved } = req.query;
     const filter = {};
 
-    // Filter by station name (partial, case-insensitive)
     if (stationName) {
         filter.stationName = { $regex: stationName, $options: 'i' };
     }
 
-    // By default, only show approved submissions unless explicitly requesting pending or all
     if (typeof approved === 'undefined') {
         filter.approved = true;
     } else if (approved === 'true') {
@@ -290,17 +271,14 @@ app.get('/api/prices', async (req, res) => {
         filter.approved = false;
     }
 
-    // Filter by price range for a specific fuel type
     if (fuelType && (minPrice || maxPrice)) {
         filter[`prices.${fuelType}`] = {};
         if (minPrice) filter[`prices.${fuelType}`].$gte = parseFloat(minPrice);
         if (maxPrice) filter[`prices.${fuelType}`].$lte = parseFloat(maxPrice);
     }
 
-    // Get all matching submissions
     const all = await Price.find(filter).sort({ timestamp: -1 });
 
-    // Only keep the latest per station (by name+lat+lng)
     const unique = [];
     const seen = new Set();
     for (const sub of all) {
@@ -314,31 +292,25 @@ app.get('/api/prices', async (req, res) => {
     res.json(unique);
 });
 
-// GET /api/user-score - Retrieve user score
 app.get('/api/user-score', async (req, res) => {
     const username = req.query.username;
     const user = await User.findOne({ username });
     res.json({ score: user?.score || 1, isAdmin: !!user?.isAdmin });
 });
 
-// GET /api/user-submissions - Retrieve submissions by a specific user
 app.get('/api/user-submissions', async (req, res) => {
     const username = req.query.username;
     const submissions = await Price.find({ username });
     res.json(submissions);
 });
 
-// GET /api/station-names?query=sh
 app.get('/api/station-names', async (req, res) => {
     const { query } = req.query;
     if (!query) return res.json([]);
-    // Find distinct station names that match the query (case-insensitive, partial)
     const names = await Price.distinct('stationName', { stationName: { $regex: query, $options: 'i' } });
-    // Optionally, sort and limit results
     res.json(names.slice(0, 10));
 });
 
-// GET /api/station-suggestions?query=Sh
 app.get('/api/station-suggestions', async (req, res) => {
     const { query } = req.query;
     if (!query) return res.json([]);
@@ -374,10 +346,8 @@ app.get('/api/station-suggestions', async (req, res) => {
     })));
 });
 
-// GET /api/user-rankings
 app.get('/api/user-rankings', async (req, res) => {
     const users = await User.find({}, { username: 1, score: 1, isAdmin: 1, _id: 0 }).sort({ score: -1 });
-    // Assign badge/rank based on score
     const ranked = users.map(u => {
         let badge = 'Newbie';
         if (u.score >= 100) badge = 'Legend';
@@ -389,16 +359,13 @@ app.get('/api/user-rankings', async (req, res) => {
     res.json(ranked);
 });
 
-// GET /api/station-rankings - Get stations ranked by lowest prices
 app.get('/api/station-rankings', async (req, res) => {
     const { fuelType = 'diesel', limit = 10 } = req.query;
     
     try {
-        // Get all approved submissions
         const submissions = await Price.find({ approved: true })
             .sort({ timestamp: -1 });
         
-        // Group by station name and get the latest submission for each station
         const stationMap = new Map();
         submissions.forEach(sub => {
             const key = sub.stationName.toLowerCase().trim();
@@ -407,7 +374,6 @@ app.get('/api/station-rankings', async (req, res) => {
             }
         });
         
-        // Convert to array and filter out stations without the requested fuel type
         const stations = Array.from(stationMap.values())
             .filter(sub => sub.prices && typeof sub.prices[fuelType] === 'number')
             .map(sub => ({
@@ -421,7 +387,6 @@ app.get('/api/station-rankings', async (req, res) => {
                 username: sub.username
             }));
         
-        // Sort by price (lowest first) and limit results
         const rankedStations = stations
             .sort((a, b) => a.price - b.price)
             .slice(0, parseInt(limit));
@@ -437,7 +402,6 @@ app.get('/api/station-rankings', async (req, res) => {
     }
 });
 
-// Health check endpoint for Render
 app.get('/api/health', (req, res) => {
     res.status(200).json({ 
         status: 'ok', 

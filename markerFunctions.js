@@ -1,6 +1,3 @@
-// markerFunctions.js
-// Contains marker rendering and related functions
-
 async function renderMarkers(stations) {
     markerGroup.clearLayers();
     let submittedPrices = [];
@@ -57,9 +54,7 @@ async function renderMarkers(stations) {
             popupAnchor: [0, -32]
         });
         const marker = L.marker([lat, lon], { icon }).addTo(markerGroup);
-        // Add both click and touch event handlers for mobile compatibility
         marker.on('click touchend', () => {
-            // Store the station data globally so showStationDetails can access it
             window.currentStation = {
                 name: name,
                 brand: brand,
@@ -70,7 +65,6 @@ async function renderMarkers(stations) {
                 submitted: latestSubmission
             };
             
-            // Call showStationDetails with the station data
             if (typeof showStationDetails === 'function') {
                 showStationDetails(window.currentStation);
             } else {
@@ -92,9 +86,7 @@ async function renderMarkers(stations) {
                 u95: 61.20 + Math.random() * 3 
             };
             const marker = L.marker([s.lat, s.lon]).addTo(markerGroup);
-            // Add both click and touch event handlers for mobile compatibility
             marker.on('click touchend', () => {
-                // Store the station data globally so showStationDetails can access it
                 window.currentStation = {
                     name: s.tags.name,
                     brand: s.tags.brand,
@@ -105,7 +97,6 @@ async function renderMarkers(stations) {
                     submitted: null
                 };
                 
-                // Call showStationDetails with the station data
                 if (typeof showStationDetails === 'function') {
                     showStationDetails(window.currentStation);
                 } else {
@@ -129,9 +120,7 @@ function renderMarkersFromBackend(prices) {
             popupAnchor: [0, -32]
         });
         const marker = L.marker([sub.lat, sub.lng], { icon }).addTo(markerGroup);
-        // Add both click and touch event handlers for mobile compatibility
         marker.on('click touchend', () => {
-            // Store the station data globally so showStationDetails can access it
             window.currentStation = {
                 name: sub.stationName,
                 brand: sub.brand,
@@ -142,7 +131,6 @@ function renderMarkersFromBackend(prices) {
                 submitted: sub
             };
             
-            // Call showStationDetails with the station data
             if (typeof showStationDetails === 'function') {
                 showStationDetails(window.currentStation);
             } else {

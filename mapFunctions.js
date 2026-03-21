@@ -1,10 +1,4 @@
-// mapFunctions.js
-// Contains map-related functions extracted from index.html
-
-// Import config for API URLs
 import config from './config.js';
-
-// Import utility functions
 import { isInButuan } from './utilFunctions.js';
 import { renderMarkers } from './markerFunctions.js';
 
@@ -18,24 +12,20 @@ async function handleSearch() {
 }
 
 function selectCity(lat, lng) {
-    // Only allow Butuan City selection
     const butuanLat = 8.9475;
     const butuanLng = 125.5406;
     
-    // Use a small tolerance for floating point comparison
     const tolerance = 0.0001;
     if (Math.abs(lat - butuanLat) > tolerance || Math.abs(lng - butuanLng) > tolerance) {
         showErrorMessage("Only Butuan City is supported at this time.");
         return;
     }
     
-    // Cache the city selection
     localStorage.setItem('cityLat', lat.toString());
     localStorage.setItem('cityLng', lng.toString());
     
     hideModal();
     
-    // Only fly to location if we're on the map page
     if (typeof window !== 'undefined' && window.map) {
         map.flyTo([lat, lng], 15, { duration: 1.5 });
     }
@@ -44,7 +34,6 @@ function selectCity(lat, lng) {
 function useGPS() {
     hideModal();
     
-    // Only use GPS if we're on the map page
     if (typeof window !== 'undefined' && window.map) {
         map.locate({setView: true, maxZoom: 15});
     }
@@ -70,7 +59,6 @@ function vote(type) {
     
     const stationName = document.getElementById('station-name').innerText.toLowerCase().trim();
     
-    // Get location - use currentStation if available, otherwise use map center if on map page
     let lat, lng;
     if (typeof window !== 'undefined' && window.currentStation) {
         lat = window.currentStation.lat;
@@ -79,9 +67,7 @@ function vote(type) {
         lat = map.getCenter().lat;
         lng = map.getCenter().lng;
     } else {
-        // For station-focused page, we need to get the coordinates from somewhere
-        // This might need to be handled differently based on the context
-        lat = 8.9475; // Default to Butuan
+        lat = 8.9475;
         lng = 125.5406;
     }
     
@@ -93,8 +79,8 @@ function vote(type) {
         console.log('Response status:', response.status);
         if (response.ok) {
             console.log('Vote success');
-            closePanel(); // Close the panel so user can re-click marker to see updated status
-            fetchGasStations(); // Use cache to avoid 429 errors
+            closePanel();
+            fetchGasStations();
             showSuccessModal("Vote recorded!");
         } else {
             console.log('Vote error status:', response.status);
@@ -116,9 +102,7 @@ function vote(type) {
 }
 
 async function fetchGasStations(force = false) {
-    // Check if we're on the index page (no map object) or map page
     if (typeof window !== 'undefined' && window.map) {
-        // Map page logic - existing functionality
         const loader = document.getElementById('map-loader');
         const currentZoom = map.getZoom();
         if (currentZoom < 10) {
@@ -131,7 +115,7 @@ async function fetchGasStations(force = false) {
         const now = Date.now();
         if (cached && !force) {
             const { data, timestamp } = JSON.parse(cached);
-            if (now - timestamp < 3 * 86400000) { // 3 days
+            if (now - timestamp < 3 * 86400000) {
                 await renderMarkers(data);
                 return;
             }
@@ -143,26 +127,21 @@ async function fetchGasStations(force = false) {
             const data = await res.json();
             localStorage.setItem(cacheKey, JSON.stringify({ data: data.elements, timestamp: now }));
             await renderMarkers(data.elements);
-            return data.elements; // Return the data for auto-open function
+            return data.elements;
         } catch (err) {
             console.error('OSM fetch failed:', err);
-            // Return empty array instead of undefined so auto-open can still work
             return [];
         } finally {
             loader.classList.add('hidden');
         }
     } else {
-        // Index page logic - fetch from OpenStreetMap and enrich with API data
         try {
-            // First, try to fetch from OpenStreetMap with a timeout
             const query = `[out:json][timeout:25];\n(node[\"amenity\"=\"fuel\"](8.78833,125.37694,9.10833,125.69694);\n way[\"amenity\"=\"fuel\"](8.78833,125.37694,9.10833,125.69694););\nout center;`;
             
-            // Create a timeout promise
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('OSM API timeout')), 10000); // 10 second timeout
+                setTimeout(() => reject(new Error('OSM API timeout')), 10000);
             });
             
-            // Try to fetch OSM data with timeout
             let osmData;
             try {
                 const res = await Promise.race([
@@ -172,13 +151,11 @@ async function fetchGasStations(force = false) {
                 osmData = await res.json();
             } catch (timeoutErr) {
                 console.warn('OSM API timeout, using cached data or mock stations:', timeoutErr);
-                // Try to use cached data first
                 const cachedStations = localStorage.getItem('index_stations_cache');
                 if (cachedStations) {
                     try {
                         const cached = JSON.parse(cachedStations);
                         const cacheAge = Date.now() - cached.timestamp;
-                        // Use cache if less than 1 hour old
                         if (cacheAge < 3600000) {
                             console.log('Using cached station data');
                             return cached.stations;
@@ -187,7 +164,6 @@ async function fetchGasStations(force = false) {
                         console.warn('Invalid cached data:', e);
                     }
                 }
-                // Fall back to mock data
                 console.log('Using mock stations due to OSM API issues');
                 return [
                     { stationName: 'Petron Butuan', brand: 'Petron', lat: 8.9475, lng: 125.5406, prices: { diesel: null, u91: null, u95: null } },
@@ -196,7 +172,6 @@ async function fetchGasStations(force = false) {
                 ];
             }
             
-            // Fetch price data from our API
             let submittedPrices = [];
             try {
                 const priceRes = await fetch(`${config.API_BASE_URL}/api/prices?approved=true`);
@@ -205,7 +180,6 @@ async function fetchGasStations(force = false) {
                 console.error('Failed to fetch submitted prices:', err);
             }
             
-            // Process and combine the data (similar to renderMarkers logic)
             const stations = [];
             
             osmData.elements.forEach(s => {
@@ -222,7 +196,6 @@ async function fetchGasStations(force = false) {
                     s.tags['addr:postcode'] || ''
                 ].filter(Boolean).join(', ');
                 
-                // Find matching price submission
                 let closestSubmission = null;
                 let minDistance = Infinity;
                 submittedPrices.forEach(sub => {
@@ -235,7 +208,6 @@ async function fetchGasStations(force = false) {
                     }
                 });
                 
-                // Get latest submission for this station
                 const stationSubmissions = submittedPrices
                     .filter(sub =>
                         isInButuan(sub.lat, sub.lng) &&
@@ -266,13 +238,11 @@ async function fetchGasStations(force = false) {
                 });
             });
             
-            // Cache the results for future use
             localStorage.setItem('index_stations_cache', JSON.stringify({
                 stations: stations,
                 timestamp: Date.now()
             }));
             
-            // If no OSM data found, use mock data like the original renderMarkers
             if (stations.length === 0) {
                 console.log('No stations found in Butuan, using mock data');
                 const mockStations = [
@@ -286,7 +256,6 @@ async function fetchGasStations(force = false) {
             return stations;
         } catch (error) {
             console.error('Error fetching gas stations:', error);
-            // Try to use cached data as final fallback
             const cachedStations = localStorage.getItem('index_stations_cache');
             if (cachedStations) {
                 try {
@@ -297,7 +266,6 @@ async function fetchGasStations(force = false) {
                     console.warn('Invalid cached data:', e);
                 }
             }
-            // Final fallback to mock data
             return [
                 { stationName: 'Petron Butuan', brand: 'Petron', lat: 8.9475, lng: 125.5406, prices: { diesel: null, u91: null, u95: null } },
                 { stationName: 'Shell Butuan', brand: 'Shell', lat: 8.9500, lng: 125.5350, prices: { diesel: null, u91: null, u95: null } },
@@ -307,14 +275,10 @@ async function fetchGasStations(force = false) {
     }
 }
 
-// Global functions for station rankings
 window.focusStationOnMap = function(stationName, lat, lng) {
-    // Only fly to location if we're on the map page
     if (typeof window !== 'undefined' && window.map) {
-        // Fly to the station location
         map.flyTo([lat, lng], 15, { duration: 1.5 });
         
-        // Try to find and open the marker for this station
         markerGroup.eachLayer(function(layer) {
             if (layer.getLatLng().lat === lat && layer.getLatLng().lng === lng) {
                 layer.openPopup();
@@ -331,16 +295,12 @@ window.closeStationRankings = function() {
 };
 
 window.getDirections = function(lat, lng, stationName) {
-    // Only create directions if we're on the map page
     if (typeof window !== 'undefined' && window.map) {
-        // Create a Google Maps directions URL
         const currentLocation = map.getCenter();
         const googleMapsUrl = `https://www.google.com/maps/dir/${currentLocation.lat},${currentLocation.lng}/${lat},${lng}/data=!3m1!4b1!4m2!4m1!3e0`;
         
-        // Open in new tab
         window.open(googleMapsUrl, '_blank');
     } else {
-        // For station-focused page, just open the destination
         const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
         window.open(googleMapsUrl, '_blank');
     }

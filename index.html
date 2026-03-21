@@ -15,14 +15,12 @@
         .nozzle-u91 { background-color: #16a34a; }
         .nozzle-u95 { background-color: #dc2626; }
         
-        /* Mobile touch improvements */
         .leaflet-marker-icon {
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
         
-        /* Ensure proper touch handling on mobile */
         @media (max-width: 768px) {
             #info-panel {
                 position: fixed;
@@ -43,14 +41,12 @@
                 transform: translateX(0);
             }
             
-            /* Make the map smaller when panel is open on mobile */
             .map-with-panel-open {
                 transform: translateX(-100%);
                 opacity: 0;
                 pointer-events: none;
             }
             
-            /* Close button styling for mobile */
             #info-panel .close-btn {
                 position: absolute;
                 top: 20px;
@@ -68,7 +64,6 @@
             }
         }
         
-        /* Styling for stations without price data */
         .no-price-station {
             border-color: #f3f4f6;
             background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);

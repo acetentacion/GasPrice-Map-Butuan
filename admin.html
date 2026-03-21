@@ -13,7 +13,6 @@
         <button onclick="window.location.href='index.html'" class="mt-6 bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold">Back to Main Page</button>
     </div>
 
-    <!-- Modal for feedback -->
     <div id="action-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
         <div class="bg-white rounded-xl shadow-xl p-6 max-w-xs w-full text-center">
             <div id="action-modal-message" class="text-lg font-bold mb-4"></div>
@@ -23,13 +22,9 @@
 
     <script>
         let username = localStorage.getItem('username');
-        // You may want to check admin status here as well
 
-        // Ensure config is available
         async function showPendingApprovals() {
-            // Wait for config to be loaded
             if (typeof config === 'undefined' || !config.API_BASE_URL) {
-                // Fallback to hardcoded URL if config is not available
                 const fallbackUrl = 'https://gasprice-map-butuan.onrender.com';
                 const res = await fetch(`${fallbackUrl}/api/prices?approved=false`);
                 const pending = await res.json();
@@ -57,7 +52,6 @@
                     `;
                 }).join('');
             } else {
-                // Use config URL
                 const res = await fetch(`${config.API_BASE_URL}/api/prices?approved=false`);
                 const pending = await res.json();
                 const list = document.getElementById('pending-list');
@@ -91,7 +85,6 @@
                 ? config.API_BASE_URL 
                 : 'https://gasprice-map-butuan.onrender.com';
             
-            // Get username from localStorage since it's not available in admin context
             const adminUsername = localStorage.getItem('username');
             
             if (!adminUsername) {
@@ -123,7 +116,6 @@
                 ? config.API_BASE_URL 
                 : 'https://gasprice-map-butuan.onrender.com';
             
-            // Get username from localStorage since it's not available in admin context
             const adminUsername = localStorage.getItem('username');
             
             if (!adminUsername) {

@@ -1,15 +1,12 @@
-// utilFunctions.js
-// Utility functions extracted from index.html
-
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
               Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Return number instead of string
+    return R * c;
 }
 
 function getTimeAgo(date) {
@@ -25,7 +22,6 @@ function getTimeAgo(date) {
 }
 
 function isInButuan(lat, lng) {
-    // Butuan bounding box (approximate)
     return lat >= 8.78833 && lat <= 9.10833 && lng >= 125.37694 && lng <= 125.69694;
 }
 

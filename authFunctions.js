@@ -1,4 +1,3 @@
-// UI handler functions for login/register modals
 import config from './config.js';
 
 function login() {
@@ -19,7 +18,6 @@ function login() {
             showErrorMessage(data.error);
         } else {
             localStorage.setItem('username', data.username);
-            // Set global username variable for other functions to use
             window.username = data.username;
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('user-info').innerText = data.username;
@@ -27,7 +25,6 @@ function login() {
             document.getElementById('logout-btn').style.display = 'flex';
             document.getElementById('login-btn').style.display = 'none';
             document.getElementById('profile-btn').style.display = 'flex';
-            // Update mobile navigation buttons
             const loginNavBtn = document.getElementById('login-nav-btn');
             const profileNavBtn = document.getElementById('profile-nav-btn');
             const logoutNavBtn = document.getElementById('logout-nav-btn');
@@ -35,7 +32,6 @@ function login() {
             if (profileNavBtn) profileNavBtn.style.display = 'flex';
             if (logoutNavBtn) logoutNavBtn.style.display = 'flex';
             if (window.updateAdminUI) window.updateAdminUI();
-            // Optionally reload or update UI
         }
     })
     .catch(err => {

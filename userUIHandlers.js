@@ -1,4 +1,3 @@
-// UI handler for User Rankings modal
 import config from './config.js';
 
 function showRankings() {
@@ -42,10 +41,8 @@ function closeRankings() {
     document.getElementById('user-rankings-modal').classList.add('hidden');
 }
 
-// UI handler for Station Rankings modal
 export function showStationRankings() {
     document.getElementById('station-rankings-modal').classList.remove('hidden');
-    // Load default rankings for diesel
     loadStationRankings('diesel');
 }
 
@@ -53,12 +50,10 @@ export function closeStationRankings() {
     document.getElementById('station-rankings-modal').classList.add('hidden');
 }
 
-// Load station rankings for a specific fuel type
 function loadStationRankings(fuelType) {
     const display = document.getElementById('current-fuel-display');
     const list = document.getElementById('station-rankings-list');
     
-    // Update current selection display
     const fuelNames = {
         'diesel': 'Diesel',
         'u91': 'Unleaded 91', 
@@ -69,7 +64,6 @@ function loadStationRankings(fuelType) {
         display.innerHTML = `<span class="text-sm font-bold text-blue-600 uppercase tracking-widest">Current: ${fuelNames[fuelType] || fuelType}</span>`;
     }
     
-    // Update button styles
     document.querySelectorAll('.fuel-btn').forEach(btn => {
         const isActive = btn.getAttribute('data-fuel') === fuelType;
         btn.style.borderColor = isActive ? '#3b82f6' : '#e5e7eb';
@@ -77,7 +71,6 @@ function loadStationRankings(fuelType) {
         btn.style.backgroundColor = isActive ? '#eff6ff' : 'transparent';
     });
     
-    // Show loading state
     if (list) {
         list.innerHTML = '<div class="flex justify-center p-4"><div class="loader"></div></div>';
     }
@@ -135,7 +128,6 @@ function loadStationRankings(fuelType) {
         });
 }
 
-// Helper function to get brand logo HTML
 function getBrandLogo(brand) {
     const brandKey = (brand || '').toLowerCase();
     const logoMap = {
@@ -148,7 +140,6 @@ function getBrandLogo(brand) {
     return logoMap[brandKey] || '⛽';
 }
 
-// Helper function to get price color based on fuel type
 function getPriceColor(fuelType) {
     const colorMap = {
         'diesel': 'text-blue-600',
@@ -158,7 +149,6 @@ function getPriceColor(fuelType) {
     return colorMap[fuelType] || 'text-gray-600';
 }
 
-// Badge and rank rendering helpers
 function getBadge(score, isAdmin) {
     if (isAdmin) return { badge: 'Admin', color: 'red' };
     if (score >= 50) return { badge: 'Legend', color: 'yellow' };
@@ -168,20 +158,15 @@ function getBadge(score, isAdmin) {
     return { badge: 'Newbie', color: 'gray' };
 }
 
-// UI handler for User Profile modal
 function showUserProfile() {
-    // 1. Show the modal first
     const modal = document.getElementById('user-profile-modal');
     if (modal) modal.classList.remove('hidden');
 
-    // 2. Get username from localStorage (Much safer than the DOM)
     const userInfo = localStorage.getItem('username') || 'Guest';
 
-    // 3. Fetch User Score and Badge
     fetch(`${config.API_BASE_URL}/api/user-score?username=${encodeURIComponent(userInfo)}`)
         .then(res => res.json())
         .then(({ score, isAdmin }) => {
-            // Ensure getBadge function exists in your scope
             const { badge, color } = getBadge(score, isAdmin);
             const infoContainer = document.getElementById('user-profile-info');
             
@@ -195,10 +180,9 @@ function showUserProfile() {
         })
         .catch(err => console.error("Score fetch failed:", err));
 
-    // 4. Fetch Submissions
     const historyContainer = document.getElementById('user-profile-history');
     if (historyContainer) {
-        historyContainer.innerHTML = '<div class="p-4 text-center"><div class="loader mx-auto"></div></div>'; // Loading state
+        historyContainer.innerHTML = '<div class="p-4 text-center"><div class="loader mx-auto"></div></div>';
         
         fetch(`${config.API_BASE_URL}/api/user-submissions?username=${encodeURIComponent(userInfo)}`)
             .then(res => res.json())

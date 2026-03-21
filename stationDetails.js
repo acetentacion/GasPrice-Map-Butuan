@@ -1,12 +1,7 @@
-// stationDetails.js
-// Station details and price submission functions
-// Global variable to store the currently selected station
 let currentStation = null;
 
-// Import config for API URLs
 import config from './config.js';
 
-// Modal functions
 function showSuccessMessage(message) {
     const successModal = document.getElementById('success-modal');
     if (successModal) {
@@ -70,20 +65,16 @@ function closeLoginRequiredModal() {
 function showStationDetails(data) {
     currentStation = data;
     
-    // Check if we're on the page with the info panel (both index.html and map.html have these elements now)
     const stationNameEl = document.getElementById('station-name');
     const stationBrandEl = document.getElementById('station-brand');
     const stationAddressEl = document.getElementById('station-address');
     
-    // If we're on a page without the info panel elements, show map-focused details
     if (!stationNameEl || !stationBrandEl || !stationAddressEl) {
         console.log('Info panel elements not found - showing map-focused details.');
         
-        // Just show the station on the map and log the details
         if (window.map && data.lat && data.lng) {
             window.map.setView([data.lat, data.lng], 16, { animate: true });
             
-            // Create a popup with the station details
             const popupContent = `
                 <div class="text-sm">
                     <div class="font-bold text-gray-800">${data.stationName || data.name}</div>
@@ -111,11 +102,9 @@ function showStationDetails(data) {
                 </div>
             `;
             
-            // Create a marker at the station location with popup
             const marker = L.marker([data.lat, data.lng]).addTo(window.map);
             marker.bindPopup(popupContent).openPopup();
             
-            // Remove the marker after 5 seconds to clean up
             setTimeout(() => {
                 if (marker) {
                     marker.remove();
@@ -128,7 +117,6 @@ function showStationDetails(data) {
     stationNameEl.innerText = data.stationName || data.name;
     stationBrandEl.innerText = data.brand;
     stationAddressEl.innerText = data.address || 'Address not available';
-    // Check if map exists before trying to access it
     if (!window.map || !window.map.getCenter) {
         console.error('Map not initialized');
         return;
@@ -172,7 +160,6 @@ function showStationDetails(data) {
             const lat = data.lat;
             const lon = data.lng;
             
-            // Check if submittedPrices is an array and has data
             if (!Array.isArray(submittedPrices) || submittedPrices.length === 0) {
                 const historyListEl = document.getElementById('history-list');
                 const priceHistoryEl = document.getElementById('price-history');
@@ -304,7 +291,6 @@ function showStationDetails(data) {
         }
     }
     
-    // Panel behavior for both index.html and map.html
     const panel = document.getElementById('info-panel');
     
     if (!panel) {
@@ -314,14 +300,12 @@ function showStationDetails(data) {
     
     panel.classList.remove('hidden');
     
-    // Use the new sliding animation (slide from right)
     setTimeout(() => {
         panel.classList.remove('translate-x-full');
     }, 10);
 }
 
 export async function vote(type) {
-    // 1. Get username from global scope or localStorage
     const username = window.username || localStorage.getItem('username');
     
     if (!username) {
@@ -329,7 +313,6 @@ export async function vote(type) {
         return;
     }
 
-    // 2. Get the station details
     const stationNameEl = document.getElementById('station-name');
     if (!stationNameEl) {
         console.error('Station name element not found for voting');
@@ -338,7 +321,6 @@ export async function vote(type) {
     
     const stationName = stationNameEl.innerText.toLowerCase().trim();
     
-    // Ensure currentStation or map context is available
     const lat = window.currentStation ? window.currentStation.lat : (window.map ? window.map.getCenter().lat : 8.9475);
     const lng = window.currentStation ? window.currentStation.lng : (window.map ? window.map.getCenter().lng : 125.5406);
 
@@ -404,29 +386,24 @@ function submitPrices() {
     .then(res => res.json())
     .then(result => {
         if (result.message) {
-            // 1. Hide the input form
             document.getElementById('update-form').classList.add('hidden');
             
-            // 2. Show the custom success modal
             const successModal = document.getElementById('success-modal');
             if (successModal) {
                 successModal.classList.remove('hidden');
             }
 
-            // 3. Reset the form fields
             document.getElementById('new-diesel').value = '';
             document.getElementById('new-u91').value = '';
             document.getElementById('new-u95').value = '';
             const photoInput = document.getElementById('price-photo');
             if (photoInput) photoInput.value = '';
             
-            // Clear the preview image if you have one
             const preview = document.getElementById('image-preview');
             const placeholder = document.getElementById('photo-placeholder');
             if (preview) preview.classList.add('hidden');
             if (placeholder) placeholder.classList.remove('hidden');
 
-            // 4. Refresh the map markers
             if (window.fetchGasStations) window.fetchGasStations();
             
         } else {
@@ -439,7 +416,6 @@ function submitPrices() {
     });
 }
 
-// Make sure showStationDetails is available globally
 if (typeof window !== 'undefined') {
     window.showStationDetails = showStationDetails;
     window.submitPrices = submitPrices;
