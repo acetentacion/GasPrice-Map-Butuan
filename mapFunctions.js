@@ -433,9 +433,21 @@ async function fetchGasStations(force = false) {
                     fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(query)}),
                     timeoutPromise
                 ]);
+                
+                // Check if response is OK and has proper content type
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
+                // Check if response is JSON (not XML error response)
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Received non-JSON response from OSM API');
+                }
+                
                 osmData = await res.json();
-            } catch (timeoutErr) {
-                console.warn('OSM API timeout, using cached data or mock stations:', timeoutErr);
+            } catch (error) {
+                console.warn('OSM API failed, using cached data or mock stations:', error);
                 const cachedStations = localStorage.getItem('index_stations_cache');
                 if (cachedStations) {
                     try {
