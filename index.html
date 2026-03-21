@@ -1299,8 +1299,9 @@
         initializeApplication();
         
         // Initialize location tracking functionality
-        if (typeof initLocationTracking === 'function') {
-            initLocationTracking();
+        // Note: initLocationTracking is imported from mapFunctions.js and exposed globally
+        if (typeof window.initLocationTracking === 'function') {
+            window.initLocationTracking();
         }
     });
 </script>
