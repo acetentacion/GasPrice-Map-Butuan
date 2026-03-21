@@ -665,6 +665,7 @@
     window.showStationDetails = showStationDetails;
     window.submitPrices = submitPrices;
     window.vote = vote;
+    window.initLocationTracking = initLocationTracking;
     
     // Modal functions from stationDetails.js
     window.showSuccessMessage = showSuccessMessage;
@@ -1296,6 +1297,11 @@
     window.addEventListener('DOMContentLoaded', () => {
         // Start the loading process
         initializeApplication();
+        
+        // Initialize location tracking functionality
+        if (typeof initLocationTracking === 'function') {
+            initLocationTracking();
+        }
     });
 </script>
 </body>
