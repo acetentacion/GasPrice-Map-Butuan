@@ -162,7 +162,7 @@ function showStationDetails(data) {
                 <div class="w-1.5 h-10 ${f.color} rounded-full"></div>
                 <span class="font-black text-gray-700 text-sm tracking-tight">${f.label}</span>
             </div>
-            <span class="text-2xl font-black text-gray-900">₱${f.price.toFixed(2)}</span>
+            <span class="text-2xl font-black text-gray-900">₱${f.price !== null && f.price !== undefined ? f.price.toFixed(2) : '--'}</span>
         </div>
     `).join('');
     fetch(`${config.API_BASE_URL}/api/prices`)
