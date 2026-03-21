@@ -1265,6 +1265,7 @@
                 const modal = document.getElementById('location-permission-modal');
                 if (modal) {
                     modal.classList.remove('hidden');
+                    modal.style.display = 'flex'; // Ensure it's visible
                 }
                 // Don't continue initialization until user responds to permission modal
                 return;
@@ -1644,7 +1645,7 @@
         if (followBtn) {
             if (window.followMode) {
                 followBtn.classList.add('active');
-                followBtn.querySelector('span').innerText = 'Following';
+                followBtn.querySelector('span').innerText = 'Followihttps://gasfinderbxu.netlify.app/index.htmlng';
             } else {
                 followBtn.classList.remove('active');
                 followBtn.querySelector('span').innerText = 'Follow';
