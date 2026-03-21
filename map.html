@@ -508,7 +508,7 @@
     <script type="module">
     // --- 1. Imports ---
     import { login, register, showRegisterModal, showLoginModal } from './authFunctions.js';
-    import { selectCity, handleSearch, useGPS, fetchGasStations } from './mapFunctions.js';
+    import { selectCity, handleSearch, useGPS, fetchGasStations, initLocationTracking } from './mapFunctions.js';
     import { renderMarkers } from './markerFunctions.js';
     import { showRankings, closeRankings, showUserProfile, closeUserProfile, showStationRankings, closeStationRankings } from './userUIHandlers.js';
     import { calculateDistance, getTimeAgo, isInButuan } from './utilFunctions.js';
@@ -538,9 +538,6 @@
     // Station Rankings functions
     window.showStationRankings = showStationRankings;
     window.closeStationRankings = closeStationRankings;
-    
-    // Location tracking functions
-    window.initLocationTracking = initLocationTracking;
     
     // Load station rankings function (defined in userUIHandlers.js but needs global access)
     window.loadStationRankings = function(fuelType) {
