@@ -78,7 +78,7 @@ function register() {
 
 function showRegisterModal() {
     document.getElementById('login-modal').style.display = 'none';
-    // Note: register modal not implemented in HTML, so just hide login modal
+    document.getElementById('register-modal').style.display = 'flex';
 }
 
 function showLoginModal() {
