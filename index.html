@@ -1419,26 +1419,32 @@
         // Start the loading process
         initializeApplication();
         
-    // Initialize location tracking functionality
-    // Note: initLocationTracking is imported from mapFunctions.js and exposed globally
-    // We need to wait for modules to be fully loaded
-    setTimeout(() => {
+        // Initialize location tracking functionality
+        // Wait for modules to be fully loaded before initializing
+        waitForModulesAndInit();
+    });
+    
+    // Function to wait for modules and initialize location tracking
+    function waitForModulesAndInit() {
+        // Check if modules are loaded by looking for the initLocationTracking function
         if (typeof window.initLocationTracking === 'function') {
+            console.log('Modules loaded, initializing location tracking...');
             window.initLocationTracking();
         } else {
-            console.warn('initLocationTracking not available yet, trying again...');
+            console.warn('Modules not loaded yet, waiting...');
+            // Wait a bit longer and try again
             setTimeout(() => {
                 if (typeof window.initLocationTracking === 'function') {
+                    console.log('Modules loaded after delay, initializing location tracking...');
                     window.initLocationTracking();
                 } else {
-                    console.error('initLocationTracking still not available');
+                    console.error('Modules still not loaded, using fallback...');
                     // Fallback: manually initialize location tracking
                     setupLocationTrackingFallback();
                 }
-            }, 1000);
+            }, 500);
         }
-    }, 100);
-    });
+    }
 </script>
 </body>
 </html>
