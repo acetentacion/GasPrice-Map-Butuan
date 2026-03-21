@@ -4,6 +4,10 @@
 // Import config for API URLs
 import config from './config.js';
 
+// Import utility functions
+import { isInButuan } from './utilFunctions.js';
+import { renderMarkers } from './markerFunctions.js';
+
 async function handleSearch() {
     const query = document.getElementById('city-search').value;
     if (!query) return;
@@ -139,8 +143,11 @@ async function fetchGasStations(force = false) {
             const data = await res.json();
             localStorage.setItem(cacheKey, JSON.stringify({ data: data.elements, timestamp: now }));
             await renderMarkers(data.elements);
+            return data.elements; // Return the data for auto-open function
         } catch (err) {
             console.error('OSM fetch failed:', err);
+            // Return empty array instead of undefined so auto-open can still work
+            return [];
         } finally {
             loader.classList.add('hidden');
         }
