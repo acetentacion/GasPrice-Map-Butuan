@@ -1189,6 +1189,62 @@
         }, 8000);
     };
 
+    // Function to get user's current location automatically
+    async function getCurrentLocation() {
+        return new Promise((resolve, reject) => {
+            // Check if geolocation is available
+            if (!navigator.geolocation) {
+                console.warn('Geolocation is not supported by this browser');
+                resolve();
+                return;
+            }
+
+            // Update loading step indicator
+            updateLoadingProgress('step-ui', 95);
+
+            // Try to get current location
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+
+                    console.log('Current location obtained:', { lat, lng, accuracy });
+
+                    // Store current location globally for use in station list
+                    window.currentLocationMarker = {
+                        getLatLng: () => ({ lat, lng })
+                    };
+
+                    // Update city coordinates to user's current location
+                    localStorage.setItem('cityLat', lat.toString());
+                    localStorage.setItem('cityLng', lng.toString());
+                    currentCityLat = lat;
+                    currentCityLng = lng;
+
+                    // Re-render station list with updated distances
+                    renderStationList();
+
+                    resolve();
+                },
+                function(error) {
+                    console.warn('Failed to get current location:', error);
+                    // Fallback to Butuan City center if location fails
+                    currentCityLat = 8.9475;
+                    currentCityLng = 125.5406;
+                    localStorage.setItem('cityLat', currentCityLat.toString());
+                    localStorage.setItem('cityLng', currentCityLng.toString());
+                    resolve();
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000 // 5 minutes cache
+                }
+            );
+        });
+    }
+
     // --- 5. Loading Screen Management ---
     function updateLoadingProgress(step, percentage) {
         const progressBar = document.getElementById('loading-progress-bar');
@@ -1316,6 +1372,10 @@
             
             // Step 5: Initialize UI state
             initializeUIState();
+            
+            // Step 5: Get user's current location automatically
+            updateLoadingProgress('step-ui', 95);
+            await getCurrentLocation();
             
             updateLoadingProgress('step-ui', 100);
             
