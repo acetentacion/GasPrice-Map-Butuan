@@ -736,11 +736,17 @@
             // Fetch station data to populate the modal
             const stations = await fetchGasStations();
             
+            // Check if stations is an array and has data
+            if (!Array.isArray(stations) || stations.length === 0) {
+                console.warn('No stations data available for auto-open');
+                return;
+            }
+            
             // Find the matching station with more flexible matching
             const targetStation = stations.find(station => {
-                const nameMatch = station.stationName.toLowerCase().trim() === stationName.toLowerCase().trim();
-                const latMatch = Math.abs(station.lat - lat) < 0.001; // Allow small tolerance for floating point comparison
-                const lngMatch = Math.abs(station.lng - lng) < 0.001;
+                const nameMatch = station.stationName && station.stationName.toLowerCase().trim() === stationName.toLowerCase().trim();
+                const latMatch = station.lat && Math.abs(station.lat - lat) < 0.001; // Allow small tolerance for floating point comparison
+                const lngMatch = station.lng && Math.abs(station.lng - lng) < 0.001;
                 
                 return nameMatch && latMatch && lngMatch;
             });
@@ -824,9 +830,11 @@
             document.getElementById('city-modal').style.display = 'flex';
         }
         
-        fetchGasStations().then(() => {
+        fetchGasStations().then((stations) => {
             // Auto-open station modal after stations are loaded
             autoOpenStationModal();
+        }).catch(error => {
+            console.error('Error fetching stations for auto-open:', error);
         });
     });
 </script>
