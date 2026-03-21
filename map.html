@@ -763,7 +763,61 @@
                 window.map.flyTo([lat, lng], 15, { duration: 1.5 });
             }
 
-            // Fetch station data to populate the modal
+            // First, try to fetch approved prices directly from API database
+            console.log('Fetching approved prices from API database...');
+            try {
+                const response = await fetch(`${config.API_BASE_URL}/api/prices?approved=true`);
+                const submittedPrices = await response.json();
+                
+                // Find matching station in API data
+                const apiStationSubmissions = submittedPrices
+                    .filter(sub =>
+                        sub.stationName && 
+                        sub.lat && 
+                        sub.lng &&
+                        sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim() &&
+                        Math.abs(sub.lat - lat) < 0.001 &&
+                        Math.abs(sub.lng - lng) < 0.001
+                    )
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                if (apiStationSubmissions.length > 0) {
+                    const latestSubmission = apiStationSubmissions[0];
+                    
+                    // Create a proper station object with the structure expected by showStationDetails
+                    const apiStation = {
+                        stationName: stationName,
+                        lat: lat,
+                        lng: lng,
+                        brand: latestSubmission.brand || 'Unknown',
+                        address: latestSubmission.address || 'Location: ' + lat.toFixed(4) + ', ' + lng.toFixed(4),
+                        prices: latestSubmission.prices || {
+                            diesel: null,
+                            u91: null,
+                            u95: null
+                        },
+                        priceHistory: apiStationSubmissions,
+                        verificationStatus: 'approved',
+                        username: latestSubmission.username,
+                        timestamp: latestSubmission.timestamp,
+                        submitted: latestSubmission
+                    };
+                    
+                    // Set the current station globally so showStationDetails can access it
+                    window.currentStation = apiStation;
+                    
+                    // Open the modal with station details
+                    if (window.showStationDetails) {
+                        window.showStationDetails(apiStation);
+                    }
+                    return;
+                }
+            } catch (apiError) {
+                console.warn('Failed to fetch from API:', apiError);
+            }
+            
+            // If not found in API data, try OSM data as fallback
+            console.log('Station not found in API database, trying OSM data...');
             let stations;
             try {
                 stations = await fetchGasStations();
@@ -790,65 +844,6 @@
                 
                 return nameMatch && latMatch && lngMatch;
             });
-            
-            // If not found in OSM data, try to fetch from API directly
-            if (!targetStation) {
-                console.log('Station not found in OSM data, trying API directly...');
-                try {
-                    const response = await fetch(`${config.API_BASE_URL}/api/prices?approved=true`);
-                    const submittedPrices = await response.json();
-                    
-                    // Find matching station in API data
-                    const apiStationSubmissions = submittedPrices
-                        .filter(sub =>
-                            sub.stationName && 
-                            sub.lat && 
-                            sub.lng &&
-                            sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim() &&
-                            Math.abs(sub.lat - lat) < 0.001 &&
-                            Math.abs(sub.lng - lng) < 0.001
-                        )
-                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                    
-                    if (apiStationSubmissions.length > 0) {
-                        const latestSubmission = apiStationSubmissions[0];
-                        
-                        // Create a proper station object with the structure expected by showStationDetails
-                        const apiStation = {
-                            stationName: stationName,
-                            lat: lat,
-                            lng: lng,
-                            brand: latestSubmission.brand || 'Unknown',
-                            address: latestSubmission.address || 'Location: ' + lat.toFixed(4) + ', ' + lng.toFixed(4),
-                            prices: latestSubmission.prices || {
-                                diesel: null,
-                                u91: null,
-                                u95: null
-                            },
-                            priceHistory: apiStationSubmissions,
-                            verificationStatus: 'approved',
-                            username: latestSubmission.username,
-                            timestamp: latestSubmission.timestamp,
-                            submitted: latestSubmission
-                        };
-                        
-                        // Set the current station globally so showStationDetails can access it
-                        window.currentStation = apiStation;
-                        
-                        // Open the modal with station details
-                        if (window.showStationDetails) {
-                            window.showStationDetails(apiStation);
-                        }
-                        return;
-                    }
-                } catch (apiError) {
-                    console.warn('Failed to fetch from API:', apiError);
-                }
-                
-                // If still not found, open modal for new submission
-                openStationModalForNewSubmission(stationName, lat, lng);
-                return;
-            }
 
             if (targetStation) {
                 // Set the current station globally so showStationDetails can access it
