@@ -862,14 +862,49 @@
             return;
         }
 
-        // Sort stations by price for the selected fuel type (cheapest first)
-        if (currentFilter !== 'all') {
-            filteredStations.sort((a, b) => {
+        // Sort stations by distance first, then by price (cheapest first within same distance range)
+        filteredStations.sort((a, b) => {
+            // Calculate distances for both stations
+            let distA, distB;
+            
+            // Use user's current tracked location if available, otherwise fall back to city coordinates
+            let userLat, userLng;
+            if (window.currentLocationMarker) {
+                const currentLatLng = window.currentLocationMarker.getLatLng();
+                userLat = currentLatLng.lat;
+                userLng = currentLatLng.lng;
+            } else if (currentCityLat && currentCityLng) {
+                userLat = currentCityLat;
+                userLng = currentCityLng;
+            } else {
+                // Fallback to Butuan City center
+                userLat = 8.9475;
+                userLng = 125.5406;
+            }
+            
+            distA = calculateDistance(userLat, userLng, a.lat, a.lng);
+            distB = calculateDistance(userLat, userLng, b.lat, b.lng);
+            
+            // Primary sort: by distance (closest first)
+            if (distA !== distB) {
+                return distA - distB;
+            }
+            
+            // Secondary sort: by price (cheapest first) for the selected fuel type
+            if (currentFilter !== 'all') {
                 const priceA = a.prices[currentFilter];
                 const priceB = b.prices[currentFilter];
+                
+                // Handle null/undefined prices - stations with no price data should appear last
+                if (priceA === null || priceA === undefined) return 1;
+                if (priceB === null || priceB === undefined) return -1;
+                
                 return priceA - priceB;
-            });
-        }
+            }
+            
+            // If distances and prices are the same, maintain original order
+            return 0;
+        });
 
         list.innerHTML = filteredStations.map(station => {
             const brandLogo = window.getBrandLogo(station.brand);
