@@ -6,7 +6,22 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Redirect all routes to index.html for SPA
+# Redirect all routes to appropriate pages for SPA
+[[redirects]]
+  from = "/webview"
+  to = "/webview.html"
+  status = 200
+
+[[redirects]]
+  from = "/map"
+  to = "/map.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
