@@ -699,6 +699,121 @@
         'default': '/logos/default.png'
     };
 
+    // Function to parse URL parameters
+    function getUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            lat: params.get('lat'),
+            lng: params.get('lng'),
+            name: params.get('name')
+        };
+    }
+
+    // Function to auto-open station modal from URL parameters
+    async function autoOpenStationModal() {
+        const params = getUrlParams();
+        
+        if (!params.lat || !params.lng || !params.name) {
+            return; // No URL parameters, don't auto-open
+        }
+
+        try {
+            const lat = parseFloat(params.lat);
+            const lng = parseFloat(params.lng);
+            const stationName = decodeURIComponent(params.name);
+
+            // Validate coordinates
+            if (isNaN(lat) || isNaN(lng)) {
+                console.warn('Invalid coordinates in URL parameters');
+                return;
+            }
+
+            // Fly to the station location
+            if (window.map) {
+                window.map.flyTo([lat, lng], 15, { duration: 1.5 });
+            }
+
+            // Fetch station data to populate the modal
+            const stations = await fetchGasStations();
+            
+            // Find the matching station with more flexible matching
+            const targetStation = stations.find(station => {
+                const nameMatch = station.stationName.toLowerCase().trim() === stationName.toLowerCase().trim();
+                const latMatch = Math.abs(station.lat - lat) < 0.001; // Allow small tolerance for floating point comparison
+                const lngMatch = Math.abs(station.lng - lng) < 0.001;
+                
+                return nameMatch && latMatch && lngMatch;
+            });
+
+            if (targetStation) {
+                // Set the current station globally so showStationDetails can access it
+                window.currentStation = targetStation;
+                
+                // Open the modal with station details
+                if (window.showStationDetails) {
+                    window.showStationDetails(targetStation);
+                }
+            } else {
+                console.warn('Station not found for auto-open:', stationName);
+                // Still fly to the location even if we can't find the station data
+                // Show a helpful message to the user
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-4 left-4 right-4 bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl shadow-lg z-50 max-w-md mx-auto';
+                toast.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg mb-1">Station Found</h3>
+                            <p class="text-sm text-blue-700 mb-3">We've navigated to ${stationName} but couldn't find detailed price information. The station may not have recent price submissions.</p>
+                            <div class="flex gap-2">
+                                <button onclick="this.closest('.fixed').remove()" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">Close</button>
+                            </div>
+                        </div>
+                        <button onclick="this.closest('.fixed').remove()" class="text-blue-400 hover:text-blue-600 text-xl">×</button>
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                // Auto-remove after 6 seconds
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 6000);
+            }
+
+        } catch (error) {
+            console.error('Error auto-opening station modal:', error);
+            // Show error message to user
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 left-4 right-4 bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl shadow-lg z-50 max-w-md mx-auto';
+            toast.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-lg mb-1">Unable to Load Station</h3>
+                        <p class="text-sm text-red-700 mb-3">There was an error loading the station details. Please try again later.</p>
+                        <div class="flex gap-2">
+                            <button onclick="this.closest('.fixed').remove()" class="flex-1 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition-colors">Close</button>
+                        </div>
+                    </div>
+                    <button onclick="this.closest('.fixed').remove()" class="text-red-400 hover:text-red-600 text-xl">×</button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+        }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         const cityLat = localStorage.getItem('cityLat');
         const cityLng = localStorage.getItem('cityLng');
@@ -709,7 +824,10 @@
             document.getElementById('city-modal').style.display = 'flex';
         }
         
-        fetchGasStations();
+        fetchGasStations().then(() => {
+            // Auto-open station modal after stations are loaded
+            autoOpenStationModal();
+        });
     });
 </script>
 </body>
