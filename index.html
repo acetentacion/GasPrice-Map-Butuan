@@ -238,6 +238,10 @@
                     <div class="step-icon"></div>
                     <span>Checking authentication</span>
                 </div>
+                <div class="loading-step" id="step-location">
+                    <div class="step-icon"></div>
+                    <span>Requesting location access</span>
+                </div>
                 <div class="loading-step" id="step-stations">
                     <div class="step-icon"></div>
                     <span>Loading gas stations</span>
@@ -251,6 +255,31 @@
                     <span>Initializing interface</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Location Permission Modal -->
+    <div id="location-permission-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Location Access Required</h2>
+            <p class="text-gray-500 mb-6 font-medium">To show you the closest gas stations and accurate distances, we need access to your location. This helps us sort stations by proximity and provide the best experience.</p>
+            <div class="flex gap-3">
+                <button onclick="requestLocationPermission()" 
+                        class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 active:scale-95 transition-all">
+                    Allow Location
+                </button>
+                <button onclick="skipLocationPermission()" 
+                        class="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black shadow-lg hover:bg-gray-200">
+                    Skip
+                </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-4">You can always enable location services in your browser settings later.</p>
         </div>
     </div>
 
@@ -1226,20 +1255,65 @@
                 }
             }
             
-            updateLoadingProgress('step-stations', 30);
+            updateLoadingProgress('step-location', 20);
             
-            // Step 2: Load gas stations
+            // Step 2: Check location permission
+            const permissionState = await checkLocationPermission();
+            
+            if (permissionState === 'prompt') {
+                // Show location permission modal
+                const modal = document.getElementById('location-permission-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                }
+                // Don't continue initialization until user responds to permission modal
+                return;
+            } else if (permissionState === 'granted') {
+                // Permission already granted, try to get location
+                try {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true,
+                            timeout: 5000,
+                            maximumAge: 600000 // 10 minutes
+                        });
+                    });
+                    
+                    // Store user's location for distance calculations
+                    window.userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+                    
+                    console.log('Location permission already granted:', position.coords);
+                } catch (error) {
+                    console.warn('Could not get location even though permission granted:', error);
+                }
+            }
+            
+            // Update location step indicator
+            const stepLocation = document.getElementById('step-location');
+            if (stepLocation) {
+                stepLocation.classList.remove('active');
+                stepLocation.style.opacity = '0.4';
+                stepLocation.querySelector('.step-icon').style.background = '#4ade80'; // Green for completed
+            }
+            
+            updateLoadingProgress('step-stations', 40);
+            
+            // Step 3: Load gas stations
             const stations = await fetchGasStations();
             allStations = stations;
             
             updateLoadingProgress('step-admin', 70);
             
-            // Step 3: Update admin UI and permissions
+            // Step 4: Update admin UI and permissions
             updateAdminUI();
             
             updateLoadingProgress('step-ui', 90);
             
-            // Step 4: Initialize UI state
+            // Step 5: Initialize UI state
             initializeUIState();
             
             updateLoadingProgress('step-ui', 100);
@@ -1327,6 +1401,134 @@
         'jetti': '/logos/jetti.png',
         'default': '/logos/default.png'
     };
+
+    // Location Permission Functions
+    function checkLocationPermission() {
+        return new Promise((resolve) => {
+            if (!navigator.permissions) {
+                // Permissions API not supported, try geolocation directly
+                resolve('prompt');
+                return;
+            }
+            
+            navigator.permissions.query({ name: 'geolocation' }).then(permission => {
+                resolve(permission.state);
+            }).catch(() => {
+                // Fallback if permissions query fails
+                resolve('prompt');
+            });
+        });
+    }
+
+    async function requestLocationPermission() {
+        const modal = document.getElementById('location-permission-modal');
+        const stepLocation = document.getElementById('step-location');
+        
+        // Update loading progress
+        updateLoadingProgress('step-location', 20);
+        
+        // Hide permission modal
+        modal.classList.add('hidden');
+        
+        try {
+            // Try to get current position to trigger permission prompt
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+            });
+            
+            // Permission granted and location obtained
+            console.log('Location permission granted:', position.coords);
+            
+            // Update step indicator
+            if (stepLocation) {
+                stepLocation.classList.remove('active');
+                stepLocation.style.opacity = '0.4';
+                stepLocation.querySelector('.step-icon').style.background = '#4ade80';
+            }
+            
+            // Store user's location for distance calculations
+            window.userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            };
+            
+            // Continue with station loading
+            updateLoadingProgress('step-stations', 40);
+            const stations = await fetchGasStations();
+            allStations = stations;
+            
+            updateLoadingProgress('step-admin', 70);
+            updateAdminUI();
+            
+            updateLoadingProgress('step-ui', 90);
+            initializeUIState();
+            
+            updateLoadingProgress('step-ui', 100);
+            hideLoadingScreen();
+            
+        } catch (error) {
+            console.warn('Location permission denied or error:', error);
+            
+            // Update step indicator to show permission was skipped
+            if (stepLocation) {
+                stepLocation.classList.remove('active');
+                stepLocation.style.opacity = '0.4';
+                stepLocation.querySelector('.step-icon').style.background = '#f59e0b'; // Orange for skipped
+            }
+            
+            // Continue without location data (will use city center fallback)
+            updateLoadingProgress('step-stations', 40);
+            const stations = await fetchGasStations();
+            allStations = stations;
+            
+            updateLoadingProgress('step-admin', 70);
+            updateAdminUI();
+            
+            updateLoadingProgress('step-ui', 90);
+            initializeUIState();
+            
+            updateLoadingProgress('step-ui', 100);
+            hideLoadingScreen();
+        }
+    }
+
+    function skipLocationPermission() {
+        const modal = document.getElementById('location-permission-modal');
+        const stepLocation = document.getElementById('step-location');
+        
+        // Hide permission modal
+        modal.classList.add('hidden');
+        
+        // Update step indicator to show permission was skipped
+        if (stepLocation) {
+            stepLocation.classList.remove('active');
+            stepLocation.style.opacity = '0.4';
+            stepLocation.querySelector('.step-icon').style.background = '#f59e0b'; // Orange for skipped
+        }
+        
+        // Continue without location data (will use city center fallback)
+        updateLoadingProgress('step-stations', 40);
+        
+        // Load stations and continue initialization
+        fetchGasStations().then(stations => {
+            allStations = stations;
+            updateLoadingProgress('step-admin', 70);
+            updateAdminUI();
+            updateLoadingProgress('step-ui', 90);
+            initializeUIState();
+            updateLoadingProgress('step-ui', 100);
+            hideLoadingScreen();
+        }).catch(error => {
+            console.error('Error loading stations:', error);
+            hideLoadingScreen();
+            showErrorMessage('Failed to load stations. Please refresh the page.');
+        });
+    }
 
     // Fallback location tracking initialization function
     function setupLocationTrackingFallback() {
