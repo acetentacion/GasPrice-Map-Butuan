@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuelFinder PH | Interactive Map</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .leaflet-marker-icon {
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        .no-price-station {
+            border-color: #f3f4f6;
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            position: relative;
+        }
+        
+        .no-price-station::after {
+            content: 'No Price Data';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 12px;
+            transform: rotate(5deg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .no-price-station:hover {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+        }
+        
+        .no-price-station .w-10 {
+            border: 2px solid #ef4444;
+            background: #fee2e2;
+        }
+        
+        /* Current Location Marker Styles */
+        .current-location-marker {
+            position: relative;
+            width: 24px;
+            height: 24px;
+            background: #3b82f6;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+        
+        .current-location-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            z-index: 1001;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+        
+        .current-location-accuracy {
+            position: absolute;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            border-radius: 50%;
+            z-index: 999;
+            pointer-events: none;
+        }
+        
+        .current-location-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3b82f6;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0.9;
+        }
+        
+        .location-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .location-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            min-width: 120px;
+        }
+        
+        .location-btn:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+        
+        .location-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .location-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .location-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .location-status.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-3">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-xl font-black text-blue-600">FuelFinder PH</h1>
+                    <div class="hidden md:flex items-center space-x-2 text-sm text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span id="current-location">Butuan City</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.location.href='index.html'" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                        <span class="hidden sm:inline">Stations</span>
+                    </button>
+                    <button onclick="showCityModal()" class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold hover:bg-gray-200 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="hidden sm:inline">Change Location</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search Bar -->
+    <div class="bg-white shadow-sm border-b border-gray-200 sticky top-16 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="relative flex flex-col md:flex-row gap-2">
+                <div class="relative flex-1">
+                    <input id="search-station" type="text" placeholder="Search station on map..." class="w-full p-3 border rounded-lg" autocomplete="off" oninput="showStationSuggestions()">
+                    <div id="station-suggestions" class="absolute bg-white border rounded shadow-lg z-50" style="display:none; max-height:180px; overflow-y:auto; width:100%;"></div>
+                </div>
+                <!--
+                <div class="flex gap-2">
+                    
+                    <button onclick="useGPS()" class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="hidden sm:inline">My Location</span>
+                    </button>
+                    <button onclick="showStationRankings()" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span class="hidden sm:inline">Rankings</span> 
+                    </button>
+                </div>
+
+            -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div id="map" class="relative">
+        <div id="map-loader" class="loader absolute top-4 right-4 hidden"></div>
+        
+        <!-- Location Controls -->
+        <div class="location-controls">
+            <button id="locate-btn" class="location-btn" onclick="useGPS()" title="Find my location">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>My Location</span>
+            </button>
+            <button id="follow-btn" class="location-btn" onclick="toggleFollowMode()" title="Toggle follow mode">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Follow</span>
+            </button>
+        </div>
+        
+        <!-- Location Status -->
+        <div id="location-status" class="location-status">
+            <span id="location-status-text">Ready</span>
+        </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div id="info-panel" class="fixed right-0 top-0 w-full md:w-[400px] h-full bg-white shadow-2xl p-8 transform translate-x-full transition-transform duration-300 z-40 overflow-y-auto">
+        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h2 id="station-name" class="text-2xl font-black text-gray-900 leading-none mb-1">Station Name</h2>
+                <p id="station-brand" class="text-blue-500 font-black uppercase text-xs tracking-widest">Brand</p>
+                <p id="station-address" class="text-gray-500 text-sm mb-2"></p>
+            </div>
+            <button onclick="closePanel()" class="bg-gray-100 p-2 rounded-full text-gray-400 hover:bg-gray-200 transition-colors">✕</button>
+        </div>
+        <div id="distance-indicator" class="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19l-7-7m0 0l7-7m-7 7h16" />
+            </svg>
+            <div>
+                <p class="text-xs font-black text-blue-500 uppercase tracking-widest">Distance</p>
+                <p id="distance-value" class="text-xl font-black text-gray-900">-- km</p>
+            </div>
+        </div>
+        <div id="price-list" class="space-y-3 mb-6"></div>
+        <div id="price-history" class="mb-6 hidden">
+            <h4 class="text-sm font-bold text-gray-700 mb-2">Price History</h4>
+            <div id="history-list" class="space-y-2"></div>
+        </div>
+        <div id="verification-status" class="mb-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+            <p id="status-text" class="text-sm font-bold text-gray-700">Status: Pending</p>
+            <p id="last-update" class="text-xs text-gray-500">Updated --</p>
+        </div>
+        <div id="vote-buttons" class="flex gap-3 mb-6">
+            <button onclick="vote('confirm')" class="flex-1 py-3 bg-green-100 text-green-700 rounded-2xl font-bold hover:bg-green-200 active:scale-95 transition-all">👍 Confirm</button>
+            <button onclick="vote('dispute')" class="flex-1 py-3 bg-red-100 text-red-700 rounded-2xl font-bold hover:bg-red-200 active:scale-95 transition-all">👎 Dispute</button>
+        </div>
+        <button onclick="openUpdateForm()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span>Update Prices</span>
+        </button>
+        <div id="admin-tools" style="display:none; margin-top:10px;">
+            <button id="flag-btn" class="w-full bg-yellow-500 text-white px-4 py-2 rounded mb-2 font-bold hover:bg-yellow-600 transition-colors">Flag as Fake</button>
+            <button id="remove-btn" class="w-full bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition-colors">Remove Submission</button>
+        </div>
+    </div>
+
+    <!-- Update Form Modal -->
+    <div id="update-form" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Update Fuel Prices</h2>
+            <p class="text-gray-500 mb-6 text-sm font-medium">Help the community by providing accurate prices and a photo for verification.</p>
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-black text-gray-400 uppercase mb-1">Diesel</label>
+                        <input id="new-diesel" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-gray-400 uppercase mb-1">Unleaded 91</label>
+                        <input id="new-u91" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-gray-400 uppercase mb-1">Unleaded 95</label>
+                        <input id="new-u95" type="number" step="0.01" class="w-full p-3 bg-gray-100 rounded-xl font-bold" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-xs font-black text-gray-400 uppercase mb-2">Upload Proof (Required)</label>
+                    <div class="relative border-2 border-dashed border-gray-200 rounded-2xl p-4 text-center hover:border-blue-400 transition-colors">
+                        <input type="file" id="price-photo" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewImage(event)">
+                        <div id="photo-placeholder">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span class="text-sm text-gray-500 font-bold">Tap to take or upload photo</span>
+                        </div>
+                        <img id="image-preview" class="hidden w-full h-32 object-cover rounded-xl" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button onclick="document.getElementById('update-form').classList.add('hidden')" class="flex-1 py-3 bg-gray-100 text-gray-500 rounded-2xl font-bold hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onclick="submitPrices()" class="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all hover:bg-blue-700">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Success!</h2>
+            <p class="text-gray-500 mb-8 font-medium">Your price update has been submitted for community verification.</p>
+            <button onclick="closeSuccessModal()" 
+                    class="w-full py-4 bg-green-600 text-white rounded-2xl font-black shadow-lg hover:bg-green-700 active:scale-95 transition-all">
+                Awesome
+            </button>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Error</h2>
+            <p id="error-message" class="text-gray-500 mb-8 font-medium">An error occurred.</p>
+            <button onclick="closeErrorModal()" 
+                    class="w-full py-4 bg-red-600 text-white rounded-2xl font-black shadow-lg hover:bg-red-700 active:scale-95 transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Network Error Modal -->
+    <div id="network-error-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Network Error</h2>
+            <p class="text-gray-500 mb-8 font-medium">Please check your internet connection and try again.</p>
+            <button onclick="closeNetworkErrorModal()" 
+                    class="w-full py-4 bg-orange-600 text-white rounded-2xl font-black shadow-lg hover:bg-orange-700 active:scale-95 transition-all">
+                Try Again
+            </button>
+        </div>
+    </div>
+
+    <!-- Login Required Modal -->
+    <div id="login-required-modal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Login Required</h2>
+            <p class="text-gray-500 mb-8 font-medium">Please log in to access this feature.</p>
+            <div class="flex gap-3">
+                <button onclick="closeLoginRequiredModal()" 
+                        class="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-black shadow-lg hover:bg-gray-200">
+                    Cancel
+                </button>
+                <button onclick="showLoginModal()" 
+                        class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700">
+                    Login
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="city-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Find Fuel Prices ⛽</h2>
+            <p class="text-gray-500 mb-6 text-sm font-medium">Search a city in the Philippines to begin.</p>
+            <div class="relative mb-6">
+                <input type="text" id="city-search" placeholder="Search city (e.g. Butuan...)" class="w-full p-4 pr-12 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
+                <button onclick="handleSearch()" class="absolute right-4 top-4 text-blue-600 font-black">GO</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="selectCity(14.5995, 120.9842)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Manila</button>
+                <button onclick="selectCity(10.3157, 123.8854)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Cebu</button>
+                <button onclick="selectCity(7.1907, 125.4553)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm">Davao</button>
+                <button onclick="selectCity(8.9475, 125.5406)" class="py-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl font-bold text-gray-600 text-sm text-blue-600">Butuan</button>
+            </div>
+            <button onclick="useGPS()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700 flex items-center justify-center gap-2">Use My Location</button>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Login</h2>
+            <input id="login-username" type="text" placeholder="Username" class="w-full p-4 mb-4 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
+            <input id="login-password" type="password" placeholder="Password" class="w-full p-4 mb-6 bg-gray-100 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold text-gray-700 outline-none transition-all">
+            <button onclick="login()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg hover:bg-blue-700">Login</button>
+            <button onclick="showRegisterModal()" class="w-full mt-4 py-4 bg-gray-100 text-blue-600 rounded-2xl font-black shadow-lg hover:bg-blue-50">Register</button>
+        </div>
+    </div>
+
+    <!-- Station Rankings Modal -->
+    <div id="station-rankings-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black bg-opacity-60 hidden">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Gas Stations</h2>
+            <p class="text-gray-500 mb-4 text-sm">Stations with the lowest prices</p>
+            <div class="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                <p class="text-sm text-blue-800 font-medium">This ranking shows the stations with the lowest fuel prices in your area. Prices are updated by community members and verified by other users. Click "View" to see the station on the map or "GO" to get directions.</p>
+            </div>
+            
+            <!-- Fuel Type Selector -->
+            <div class="flex gap-2 mb-6">
+                <button onclick="loadStationRankings('diesel')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-colors" data-fuel="diesel">Diesel</button>
+                <button onclick="loadStationRankings('u91')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-green-500 hover:text-green-600 transition-colors" data-fuel="u91">Unleaded 91</button>
+                <button onclick="loadStationRankings('u95')" class="fuel-btn py-2 px-4 rounded-full text-sm font-bold border-2 border-gray-200 hover:border-red-500 hover:text-red-600 transition-colors" data-fuel="u95">Unleaded 95</button>
+            </div>
+            
+            <!-- Current Selection Indicator -->
+            <div id="current-fuel-display" class="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                <span class="text-sm font-bold text-blue-600 uppercase tracking-widest">Current: Diesel</span>
+            </div>
+            
+            <!-- Rankings List -->
+            <div id="station-rankings-list" class="space-y-3"></div>
+            
+            <button onclick="closeStationRankings()" class="w-full mt-6 py-4 bg-gray-100 text-blue-600 rounded-2xl font-black shadow-lg hover:bg-blue-50">Close</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize Leaflet map and expose globally
+        window.map = L.map('map').setView([8.9475, 125.5406], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(window.map);
+        
+        // Initialize markerGroup and add to map
+        window.markerGroup = L.layerGroup().addTo(window.map);
+        
+        // Mobile touch event enhancement
+        // Remove the touchstart event listener that was blocking marker interactions
+        // Markers now handle touchend events directly for better mobile compatibility
+    </script>
+    <script type="module" src="./config.js"></script>
+    <script type="module" src="./mapFunctions.js"></script>
+    <script type="module" src="./markerFunctions.js"></script>
+    <script type="module" src="./utilFunctions.js"></script>
+    <script type="module" src="./stationDetails.js"></script>
+    <script type="module">
+    // --- 1. Imports ---
+    import { login, register, showRegisterModal, showLoginModal } from './authFunctions.js';
+    import { selectCity, handleSearch, useGPS, fetchGasStations, initLocationTracking } from './mapFunctions.js';
+    import { renderMarkers } from './markerFunctions.js';
+    import { showRankings, closeRankings, showUserProfile, closeUserProfile, showStationRankings, closeStationRankings } from './userUIHandlers.js';
+    import { calculateDistance, getTimeAgo, isInButuan } from './utilFunctions.js';
+    import { showStationDetails, submitPrices, vote } from './stationDetails.js';
+
+    // --- 2. Expose Functions to Window (Global Scope) ---
+    window.login = login;
+    window.register = register;
+    window.showRegisterModal = showRegisterModal;
+    window.showLoginModal = showLoginModal;
+    window.selectCity = selectCity;
+    window.handleSearch = handleSearch;
+    window.useGPS = useGPS;
+    window.fetchGasStations = fetchGasStations;
+    window.renderMarkers = renderMarkers;
+    window.showRankings = showRankings;
+    window.closeRankings = closeRankings;
+    window.showUserProfile = showUserProfile;
+    window.closeUserProfile = closeUserProfile;
+    window.calculateDistance = calculateDistance;
+    window.getTimeAgo = getTimeAgo;
+    window.isInButuan = isInButuan;
+    window.showStationDetails = showStationDetails;
+    window.submitPrices = submitPrices;
+    window.vote = vote;
+    
+    // Station Rankings functions
+    window.showStationRankings = showStationRankings;
+    window.closeStationRankings = closeStationRankings;
+    
+    // Load station rankings function (defined in userUIHandlers.js but needs global access)
+    window.loadStationRankings = function(fuelType) {
+        const display = document.getElementById('current-fuel-display');
+        const list = document.getElementById('station-rankings-list');
+        
+        // Update current selection display
+        const fuelNames = {
+            'diesel': 'Diesel',
+            'u91': 'Unleaded 91', 
+            'u95': 'Unleaded 95'
+        };
+        
+        if (display) {
+            display.innerHTML = `<span class="text-sm font-bold text-blue-600 uppercase tracking-widest">Current: ${fuelNames[fuelType] || fuelType}</span>`;
+        }
+        
+        // Update button styles
+        document.querySelectorAll('.fuel-btn').forEach(btn => {
+            const isActive = btn.getAttribute('data-fuel') === fuelType;
+            btn.style.borderColor = isActive ? '#3b82f6' : '#e5e7eb';
+            btn.style.color = isActive ? '#2563eb' : '#6b7280';
+            btn.style.backgroundColor = isActive ? '#eff6ff' : 'transparent';
+        });
+        
+        // Show loading state
+        if (list) {
+            list.innerHTML = '<div class="flex justify-center p-4"><div class="loader"></div></div>';
+        }
+        
+        fetch(`${config.API_BASE_URL}/api/station-rankings?fuelType=${encodeURIComponent(fuelType)}&limit=20`)
+            .then(res => res.json())
+            .then(data => {
+                if (list && data.rankings) {
+                    list.innerHTML = data.rankings.map((station, index) => {
+                        const brandLogo = window.getBrandLogo(station.brand);
+                        const priceColor = window.getPriceColor(fuelType);
+                        
+                        return `
+                            <div class="bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer station-rank-item"
+                                 onclick="focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng})">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                            ${brandLogo}
+                                        </div>
+                                        <div>
+                                            <h3 class="font-black text-gray-800 text-lg">${station.stationName}</h3>
+                                            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">${station.brand}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-4 text-sm">
+                                        <span class="text-gray-600">📍 ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)}</span>
+                                        <span class="text-gray-600">👤 ${station.username}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Price</div>
+                                        <div class="text-2xl font-black ${priceColor}">₱${station.price.toFixed(2)}</div>
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between text-xs text-gray-400">
+                                    <span>Updated ${window.getTimeAgo(new Date(station.timestamp))}</span>
+                                    <span class="px-2 py-1 bg-gray-100 rounded-full">Total Stations: ${data.totalStations}</span>
+                                </div>
+                                <div class="mt-4 flex gap-2">
+                                    <button onclick="window.focusStationOnMap('${station.stationName}', ${station.lat}, ${station.lng}); window.closeStationRankings();" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">📍 View</button>
+                                    <button onclick="window.getDirections(${station.lat}, ${station.lng}, '${station.stationName}')" class="flex-1 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700 transition-colors">🚗 GO</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            })
+            .catch(err => {
+                console.error('Error loading station rankings:', err);
+                if (list) {
+                    list.innerHTML = '<p class="text-red-500 text-center p-4">Error loading rankings. Please try again.</p>';
+                }
+            });
+    };
+    
+    // Helper functions for station rankings
+    window.getBrandLogo = function(brand) {
+        const brandKey = (brand || '').toLowerCase();
+        const logoMap = {
+            'shell': '⛽',
+            'petron': '⛽',
+            'caltex': '⛽',
+            'flyingv': '⛽',
+            'jetti': '⛽'
+        };
+        return logoMap[brandKey] || '⛽';
+    };
+
+    window.getPriceColor = function(fuelType) {
+        const colorMap = {
+            'diesel': 'text-blue-600',
+            'u91': 'text-green-600',
+            'u95': 'text-red-600'
+        };
+        return colorMap[fuelType] || 'text-gray-600';
+    };
+
+    // --- 3. UI Helpers ---
+    window.showStationSuggestions = function() {
+        const input = document.getElementById('search-station').value.trim();
+        const suggestionsBox = document.getElementById('station-suggestions');
+        if (!input) {
+            suggestionsBox.style.display = 'none';
+            suggestionsBox.innerHTML = '';
+            return;
+        }
+        fetch(`${config.API_BASE_URL}/api/station-suggestions?query=${encodeURIComponent(input)}`)
+            .then(res => res.json())
+            .then(stations => {
+                if (stations.length === 0) {
+                    suggestionsBox.style.display = 'none';
+                    return;
+                }
+                suggestionsBox.innerHTML = stations.map(station => `
+                    <div class="p-2 cursor-pointer hover:bg-blue-50" onclick="window.focusStationOnMap('${station.name}', ${station.lat}, ${station.lng});">
+                        <div class='font-bold'>${station.name} <span class='text-xs text-gray-400'>${station.brand || ''}</span></div>
+                        <div class='text-xs text-gray-500'>${station.address || ''}</div>
+                    </div>
+                `).join('');
+                suggestionsBox.style.display = 'block';
+            });
+    };
+
+    window.focusStationOnMap = function(name, lat, lng) {
+        document.getElementById('search-station').value = name;
+        if (window.map && lat && lng) {
+            window.map.setView([lat, lng], 16, { animate: true });
+        }
+        showStationSuggestions();
+    };
+
+    window.showCityModal = function() {
+        document.getElementById('city-modal').style.display = 'flex';
+    };
+
+    // Navigation function to get directions
+    window.getDirections = function(destLat, destLng, stationName) {
+        // Try to get user's current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    
+                    // Create Google Maps URL with directions
+                    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${destLat},${destLng}&travelmode=driving`;
+                    
+                    // Open in new tab
+                    window.open(googleMapsUrl, '_blank');
+                },
+                (error) => {
+                    console.error("Error getting location:", error);
+                    // Fallback: open with just destination if we can't get user location
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${destLat},${destLng}`;
+                    window.open(googleMapsUrl, '_blank');
+                }
+            );
+        } else {
+            // Fallback: open with just destination if geolocation is not supported
+            const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${destLat},${destLng}`;
+            window.open(googleMapsUrl, '_blank');
+        }
+    };
+
+    // Info Panel Control Functions
+    window.openPanel = function() {
+        const panel = document.getElementById('info-panel');
+        panel.classList.remove('translate-x-full');
+    };
+
+    window.closePanel = function() {
+        const panel = document.getElementById('info-panel');
+        panel.classList.add('translate-x-full');
+    };
+
+    window.openUpdateForm = function() {
+        document.getElementById('update-form').classList.remove('hidden');
+    };
+
+    window.previewImage = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById('image-preview');
+            const placeholder = document.getElementById('photo-placeholder');
+            if (preview) { preview.src = e.target.result; preview.classList.remove('hidden'); }
+            if (placeholder) placeholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // Modal functions
+    window.showSuccessMessage = function(message) {
+        const successModal = document.getElementById('success-modal');
+        if (successModal) {
+            const messageEl = successModal.querySelector('p');
+            if (messageEl) messageEl.innerText = message;
+            successModal.classList.remove('hidden');
+        }
+    };
+
+    window.showErrorMessage = function(message) {
+        const errorModal = document.getElementById('error-modal');
+        if (errorModal) {
+            const messageEl = errorModal.querySelector('#error-message');
+            if (messageEl) messageEl.innerText = message;
+            errorModal.classList.remove('hidden');
+        }
+    };
+
+    window.showNetworkErrorModal = function() {
+        const networkErrorModal = document.getElementById('network-error-modal');
+        if (networkErrorModal) {
+            networkErrorModal.classList.remove('hidden');
+        }
+    };
+
+    window.showLoginRequiredModal = function() {
+        const loginRequiredModal = document.getElementById('login-required-modal');
+        if (loginRequiredModal) {
+            loginRequiredModal.classList.remove('hidden');
+        }
+    };
+
+    window.closeSuccessModal = function() {
+        const successModal = document.getElementById('success-modal');
+        if (successModal) {
+            successModal.classList.add('hidden');
+        }
+    };
+
+    window.closeErrorModal = function() {
+        const errorModal = document.getElementById('error-modal');
+        if (errorModal) {
+            errorModal.classList.add('hidden');
+        }
+    };
+
+    window.closeNetworkErrorModal = function() {
+        const networkErrorModal = document.getElementById('network-error-modal');
+        if (networkErrorModal) {
+            networkErrorModal.classList.add('hidden');
+        }
+    };
+
+    window.closeLoginRequiredModal = function() {
+        const loginRequiredModal = document.getElementById('login-required-modal');
+        if (loginRequiredModal) {
+            loginRequiredModal.classList.add('hidden');
+        }
+    };
+
+    // Function to show informational message for stations without price data
+    window.showNoPriceDataMessage = function(stationName, brand) {
+        // Create a temporary toast-style notification
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 left-4 right-4 bg-white border-2 border-red-200 text-red-800 p-4 rounded-xl shadow-lg z-50 max-w-md mx-auto';
+        toast.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-lg mb-1">No Price Data Available</h3>
+                    <p class="text-sm text-gray-600 mb-3">This station (${stationName}) currently has no fuel price information. Help the community by submitting accurate prices.</p>
+                    <div class="flex gap-2">
+                        <button onclick="this.closest('.fixed').remove()" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-200 transition-colors">Close</button>
+                        <button onclick="window.location.href='map.html?lat=${window.currentCityLat || 8.9475}&lng=${window.currentCityLng || 125.5406}&name=${encodeURIComponent(stationName)}'; this.closest('.fixed').remove();" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">View on Map</button>
+                    </div>
+                </div>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 8 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 8000);
+    };
+
+    // Function to open station modal for new submission when no data exists
+    window.openStationModalForNewSubmission = function(stationName, lat, lng) {
+        // Create a mock station object for the modal with proper structure
+        const mockStation = {
+            stationName: stationName,
+            lat: lat,
+            lng: lng,
+            brand: 'Unknown',
+            address: 'Location: ' + lat.toFixed(4) + ', ' + lng.toFixed(4),
+            prices: {
+                diesel: null,
+                u91: null,
+                u95: null
+            },
+            priceHistory: [],
+            verificationStatus: 'pending',
+            username: 'Community',
+            timestamp: new Date().toISOString(),
+            submitted: null
+        };
+
+        // Set the current station globally so showStationDetails can access it
+        window.currentStation = mockStation;
+        
+        // Open the modal with station details
+        if (window.showStationDetails) {
+            window.showStationDetails(mockStation);
+        }
+    };
+
+    // --- 4. Initialization ---
+    window.brandLogos = {
+        'shell': '/logos/shell.png',
+        'petron': '/logos/petron.png',
+        'caltex': '/logos/caltex.png',
+        'flyingv': '/logos/flyingv.png',
+        'jetti': '/logos/jetti.png',
+        'default': '/logos/default.png'
+    };
+
+    // Function to parse URL parameters
+    function getUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            lat: params.get('lat'),
+            lng: params.get('lng'),
+            name: params.get('name')
+        };
+    }
+
+    // Function to auto-open station modal from URL parameters
+    async function autoOpenStationModal() {
+        const params = getUrlParams();
+        
+        if (!params.lat || !params.lng || !params.name) {
+            return; // No URL parameters, don't auto-open
+        }
+
+        try {
+            const lat = parseFloat(params.lat);
+            const lng = parseFloat(params.lng);
+            const stationName = decodeURIComponent(params.name);
+
+            // Validate coordinates
+            if (isNaN(lat) || isNaN(lng)) {
+                console.warn('Invalid coordinates in URL parameters');
+                return;
+            }
+
+            // Fly to the station location
+            if (window.map) {
+                window.map.flyTo([lat, lng], 15, { duration: 1.5 });
+            }
+
+            // First, try to fetch approved prices directly from API database
+            console.log('Fetching approved prices from API database...');
+            try {
+                const response = await fetch(`${config.API_BASE_URL}/api/prices?approved=true`);
+                const submittedPrices = await response.json();
+                
+                // Find matching station in API data
+                const apiStationSubmissions = submittedPrices
+                    .filter(sub =>
+                        sub.stationName && 
+                        sub.lat && 
+                        sub.lng &&
+                        sub.stationName.toLowerCase().trim() === stationName.toLowerCase().trim() &&
+                        Math.abs(sub.lat - lat) < 0.001 &&
+                        Math.abs(sub.lng - lng) < 0.001
+                    )
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                if (apiStationSubmissions.length > 0) {
+                    const latestSubmission = apiStationSubmissions[0];
+                    
+                    // Create a proper station object with the structure expected by showStationDetails
+                    const apiStation = {
+                        stationName: stationName,
+                        lat: lat,
+                        lng: lng,
+                        brand: latestSubmission.brand || 'Unknown',
+                        address: latestSubmission.address || 'Location: ' + lat.toFixed(4) + ', ' + lng.toFixed(4),
+                        prices: latestSubmission.prices || {
+                            diesel: null,
+                            u91: null,
+                            u95: null
+                        },
+                        priceHistory: apiStationSubmissions,
+                        verificationStatus: 'approved',
+                        username: latestSubmission.username,
+                        timestamp: latestSubmission.timestamp,
+                        submitted: latestSubmission
+                    };
+                    
+                    // Set the current station globally so showStationDetails can access it
+                    window.currentStation = apiStation;
+                    
+                    // Open the modal with station details
+                    if (window.showStationDetails) {
+                        window.showStationDetails(apiStation);
+                    }
+                    return;
+                }
+            } catch (apiError) {
+                console.warn('Failed to fetch from API:', apiError);
+            }
+            
+            // If not found in API data, try OSM data as fallback
+            console.log('Station not found in API database, trying OSM data...');
+            let stations;
+            try {
+                stations = await fetchGasStations();
+            } catch (error) {
+                console.warn('Failed to fetch stations data:', error);
+                // Still open the modal for the user to submit prices
+                openStationModalForNewSubmission(stationName, lat, lng);
+                return;
+            }
+            
+            // Check if stations is an array and has data
+            if (!Array.isArray(stations) || stations.length === 0) {
+                console.warn('No stations data available for auto-open');
+                // Still open the modal for the user to submit prices
+                openStationModalForNewSubmission(stationName, lat, lng);
+                return;
+            }
+            
+            // Find the matching station with more flexible matching
+            const targetStation = stations.find(station => {
+                const nameMatch = station.stationName && station.stationName.toLowerCase().trim() === stationName.toLowerCase().trim();
+                const latMatch = station.lat && Math.abs(station.lat - lat) < 0.001; // Allow small tolerance for floating point comparison
+                const lngMatch = station.lng && Math.abs(station.lng - lng) < 0.001;
+                
+                return nameMatch && latMatch && lngMatch;
+            });
+
+            if (targetStation) {
+                // Set the current station globally so showStationDetails can access it
+                window.currentStation = targetStation;
+                
+                // Open the modal with station details
+                if (window.showStationDetails) {
+                    window.showStationDetails(targetStation);
+                }
+            } else {
+                console.warn('Station not found for auto-open:', stationName);
+                // Open modal for new submission since station doesn't exist in database
+                openStationModalForNewSubmission(stationName, lat, lng);
+            }
+
+        } catch (error) {
+            console.error('Error auto-opening station modal:', error);
+            // Show error message to user
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 left-4 right-4 bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl shadow-lg z-50 max-w-md mx-auto';
+            toast.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-lg mb-1">Unable to Load Station</h3>
+                        <p class="text-sm text-red-700 mb-3">There was an error loading the station details. Please try again later.</p>
+                        <div class="flex gap-2">
+                            <button onclick="this.closest('.fixed').remove()" class="flex-1 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 transition-colors">Close</button>
+                        </div>
+                    </div>
+                    <button onclick="this.closest('.fixed').remove()" class="text-red-400 hover:text-red-600 text-xl">×</button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const cityLat = localStorage.getItem('cityLat');
+        const cityLng = localStorage.getItem('cityLng');
+        if (cityLat && cityLng) {
+            document.getElementById('city-modal').style.display = 'none';
+            selectCity(parseFloat(cityLat), parseFloat(cityLng));
+        } else {
+            document.getElementById('city-modal').style.display = 'flex';
+        }
+        
+        // Initialize location tracking functionality
+        if (typeof initLocationTracking === 'function') {
+            initLocationTracking();
+        }
+        
+        fetchGasStations().then((stations) => {
+            // Auto-open station modal after stations are loaded
+            autoOpenStationModal();
+        }).catch(error => {
+            console.error('Error fetching stations for auto-open:', error);
+        });
+    });
+</script>
+</body>
+</html>
