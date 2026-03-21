@@ -17,7 +17,7 @@ A Progressive Web App is a web application that uses modern web capabilities to 
 The web app manifest provides metadata about your application, including:
 - App name and short name
 - Theme colors
-- Display mode (standalone)
+- Display mode (fullscreen)
 - Icons for different screen densities
 - App categories
 
@@ -78,7 +78,7 @@ Contains app icons in various sizes for different devices and screen densities.
 ### ✅ Working Features
 - **Offline Support**: Core functionality works without internet
 - **Home Screen Installation**: App appears as a native app
-- **Full-Screen Experience**: No browser UI elements
+- **Full-Screen Experience**: No browser UI elements (URL bar hidden)
 - **Fast Loading**: Cached resources load quickly
 - **Push Notifications**: Can be implemented for price updates
 
