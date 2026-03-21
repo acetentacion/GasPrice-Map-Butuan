@@ -883,11 +883,24 @@
             );
             
             let distance = '--';
-            if (currentCityLat && currentCityLng) {
-                const dist = calculateDistance(currentCityLat, currentCityLng, station.lat, station.lng);
-                if (dist !== undefined && dist !== null && dist !== '--') {
-                    distance = dist;
-                }
+            // Use user's current tracked location if available, otherwise fall back to city coordinates
+            let userLat, userLng;
+            if (window.currentLocationMarker) {
+                const currentLatLng = window.currentLocationMarker.getLatLng();
+                userLat = currentLatLng.lat;
+                userLng = currentLatLng.lng;
+            } else if (currentCityLat && currentCityLng) {
+                userLat = currentCityLat;
+                userLng = currentCityLng;
+            } else {
+                // Fallback to Butuan City center
+                userLat = 8.9475;
+                userLng = 125.5406;
+            }
+            
+            const dist = calculateDistance(userLat, userLng, station.lat, station.lng);
+            if (dist !== undefined && dist !== null && dist !== '--') {
+                distance = dist;
             }
 
             // Check if station has any price data

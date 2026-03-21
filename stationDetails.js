@@ -122,8 +122,21 @@ function showStationDetails(data) {
         return;
     }
     
-    const userLat = window.map.getCenter().lat;
-    const userLng = window.map.getCenter().lng;
+    // Use user's current tracked location if available, otherwise fall back to map center
+    let userLat, userLng;
+    if (window.currentLocationMarker) {
+        const currentLatLng = window.currentLocationMarker.getLatLng();
+        userLat = currentLatLng.lat;
+        userLng = currentLatLng.lng;
+    } else if (window.map && window.map.getCenter) {
+        userLat = window.map.getCenter().lat;
+        userLng = window.map.getCenter().lng;
+    } else {
+        // Fallback to Butuan City center
+        userLat = 8.9475;
+        userLng = 125.5406;
+    }
+    
     const distance = calculateDistance(userLat, userLng, data.lat, data.lng);
     
     const distanceValueEl = document.getElementById('distance-value');
