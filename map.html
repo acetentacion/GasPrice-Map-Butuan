@@ -764,7 +764,15 @@
             }
 
             // Fetch station data to populate the modal
-            const stations = await fetchGasStations();
+            let stations;
+            try {
+                stations = await fetchGasStations();
+            } catch (error) {
+                console.warn('Failed to fetch stations data:', error);
+                // Still open the modal for the user to submit prices
+                openStationModalForNewSubmission(stationName, lat, lng);
+                return;
+            }
             
             // Check if stations is an array and has data
             if (!Array.isArray(stations) || stations.length === 0) {

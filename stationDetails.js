@@ -168,11 +168,25 @@ function showStationDetails(data) {
     fetch(`${config.API_BASE_URL}/api/prices`)
         .then(res => res.json())
         .then(submittedPrices => {
-            const name = data.name;
+            const name = data.stationName || data.name;
             const lat = data.lat;
             const lon = data.lng;
+            
+            // Check if submittedPrices is an array and has data
+            if (!Array.isArray(submittedPrices) || submittedPrices.length === 0) {
+                const historyListEl = document.getElementById('history-list');
+                const priceHistoryEl = document.getElementById('price-history');
+                if (historyListEl && priceHistoryEl) {
+                    priceHistoryEl.style.display = 'none';
+                }
+                return;
+            }
+            
             const stationSubmissions = submittedPrices
                 .filter(sub =>
+                    sub.stationName && 
+                    sub.lat && 
+                    sub.lng &&
                     isInButuan(sub.lat, sub.lng) &&
                     sub.stationName.toLowerCase().trim() === name.toLowerCase().trim() &&
                     Math.sqrt((sub.lat - lat) ** 2 + (sub.lng - lon) ** 2) * 111 < 1
