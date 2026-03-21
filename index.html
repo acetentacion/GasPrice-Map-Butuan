@@ -1300,9 +1300,21 @@
         
         // Initialize location tracking functionality
         // Note: initLocationTracking is imported from mapFunctions.js and exposed globally
-        if (typeof window.initLocationTracking === 'function') {
-            window.initLocationTracking();
-        }
+        // We need to wait a bit to ensure modules are loaded
+        setTimeout(() => {
+            if (typeof window.initLocationTracking === 'function') {
+                window.initLocationTracking();
+            } else {
+                console.warn('initLocationTracking not available yet, trying again...');
+                setTimeout(() => {
+                    if (typeof window.initLocationTracking === 'function') {
+                        window.initLocationTracking();
+                    } else {
+                        console.error('initLocationTracking still not available');
+                    }
+                }, 1000);
+            }
+        }, 100);
     });
 </script>
 </body>
