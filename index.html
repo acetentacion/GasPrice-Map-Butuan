@@ -1208,7 +1208,12 @@ async function initializeApplication() {
         try {
             updateLoadingProgress('step-auth', 10);
             
-            // Step 1: Check authentication
+            // Step 1: Get user's current location FIRST
+            await getCurrentLocation();
+            
+            updateLoadingProgress('step-stations', 30);
+            
+            // Step 2: Check authentication
             const username = localStorage.getItem('username');
             if (username) {
                 window.username = username;
@@ -1225,11 +1230,6 @@ async function initializeApplication() {
                     window.username = null;
                 }
             }
-            
-            updateLoadingProgress('step-stations', 30);
-            
-            // Step 2: Get user's current location
-            await getCurrentLocation();
             
             updateLoadingProgress('step-stations', 50);
             
