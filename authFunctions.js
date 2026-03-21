@@ -82,6 +82,7 @@ function showRegisterModal() {
 }
 
 function showLoginModal() {
+    document.getElementById('register-modal').style.display = 'none';
     document.getElementById('login-modal').style.display = 'flex';
 }
 
