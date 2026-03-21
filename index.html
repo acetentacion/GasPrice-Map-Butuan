@@ -1294,27 +1294,151 @@
         'default': '/logos/default.png'
     };
 
+    // Fallback location tracking initialization function
+    function setupLocationTrackingFallback() {
+        console.log('Setting up fallback location tracking...');
+        
+        // Initialize global variables for location tracking
+        window.currentLocationMarker = null;
+        window.currentAccuracyCircle = null;
+        window.followMode = false;
+        window.locationWatchId = null;
+        
+        // Set up event listeners for location updates
+        if (typeof window !== 'undefined' && window.map) {
+            map.on('locationfound', function(e) {
+                createOrUpdateCurrentLocationMarker(e.latlng, e.accuracy);
+            });
+            
+            map.on('locationerror', function(e) {
+                console.error('Location error:', e);
+            });
+        }
+        
+        // Initialize follow mode button if it exists
+        const followBtn = document.getElementById('follow-btn');
+        if (followBtn) {
+            followBtn.addEventListener('click', toggleFollowMode);
+        }
+        
+        // Set up map move handler for follow mode
+        if (typeof window !== 'undefined' && window.map) {
+            map.on('move', function() {
+                if (window.followMode && window.currentLocationMarker) {
+                    // If user manually moves the map, temporarily disable follow mode
+                    // but keep the button active so they can re-enable it
+                    const latlng = window.currentLocationMarker.getLatLng();
+                    map.setView(latlng, map.getZoom());
+                }
+            });
+        }
+        
+        console.log('Fallback location tracking setup complete');
+    }
+
+    // Helper function to create or update current location marker (fallback)
+    function createOrUpdateCurrentLocationMarker(latlng, accuracy) {
+        if (typeof window === 'undefined' || !window.map) return;
+        
+        // Remove existing marker and accuracy circle
+        if (window.currentLocationMarker) {
+            window.map.removeLayer(window.currentLocationMarker);
+        }
+        if (window.currentAccuracyCircle) {
+            window.map.removeLayer(window.currentAccuracyCircle);
+        }
+        
+        // Create custom marker element
+        const markerDiv = document.createElement('div');
+        markerDiv.className = 'current-location-marker';
+        markerDiv.innerHTML = '<div class="current-location-label">You Are Here</div>';
+        
+        // Create marker
+        const marker = L.marker(latlng, {
+            icon: L.divIcon({
+                html: markerDiv.outerHTML,
+                className: '',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            }),
+            zIndexOffset: 1000
+        });
+        
+        // Add marker to map
+        marker.addTo(window.map);
+        window.currentLocationMarker = marker;
+        
+        // Create accuracy circle if accuracy is available
+        if (accuracy && accuracy > 0) {
+            const circle = L.circle(latlng, {
+                radius: accuracy,
+                color: 'rgba(59, 130, 246, 0.5)',
+                fillColor: 'rgba(59, 130, 246, 0.1)',
+                fillOpacity: 0.5,
+                weight: 2
+            }).addTo(window.map);
+            
+            window.currentAccuracyCircle = circle;
+        }
+        
+        // Update follow mode button state
+        updateFollowModeButton();
+    }
+
+    // Helper function to toggle follow mode (fallback)
+    function toggleFollowMode() {
+        window.followMode = !window.followMode;
+        updateFollowModeButton();
+        
+        const statusText = document.getElementById('location-status-text');
+        if (statusText) {
+            statusText.innerText = window.followMode ? 'Follow mode: ON' : 'Follow mode: OFF';
+        }
+        
+        // If follow mode is enabled and we have a current location, center on it
+        if (window.followMode && window.currentLocationMarker) {
+            const latlng = window.currentLocationMarker.getLatLng();
+            map.setView(latlng, map.getZoom());
+        }
+    }
+
+    // Helper function to update follow mode button (fallback)
+    function updateFollowModeButton() {
+        const followBtn = document.getElementById('follow-btn');
+        if (followBtn) {
+            if (window.followMode) {
+                followBtn.classList.add('active');
+                followBtn.querySelector('span').innerText = 'Following';
+            } else {
+                followBtn.classList.remove('active');
+                followBtn.querySelector('span').innerText = 'Follow';
+            }
+        }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         // Start the loading process
         initializeApplication();
         
-        // Initialize location tracking functionality
-        // Note: initLocationTracking is imported from mapFunctions.js and exposed globally
-        // We need to wait a bit to ensure modules are loaded
-        setTimeout(() => {
-            if (typeof window.initLocationTracking === 'function') {
-                window.initLocationTracking();
-            } else {
-                console.warn('initLocationTracking not available yet, trying again...');
-                setTimeout(() => {
-                    if (typeof window.initLocationTracking === 'function') {
-                        window.initLocationTracking();
-                    } else {
-                        console.error('initLocationTracking still not available');
-                    }
-                }, 1000);
-            }
-        }, 100);
+    // Initialize location tracking functionality
+    // Note: initLocationTracking is imported from mapFunctions.js and exposed globally
+    // We need to wait for modules to be fully loaded
+    setTimeout(() => {
+        if (typeof window.initLocationTracking === 'function') {
+            window.initLocationTracking();
+        } else {
+            console.warn('initLocationTracking not available yet, trying again...');
+            setTimeout(() => {
+                if (typeof window.initLocationTracking === 'function') {
+                    window.initLocationTracking();
+                } else {
+                    console.error('initLocationTracking still not available');
+                    // Fallback: manually initialize location tracking
+                    setupLocationTrackingFallback();
+                }
+            }, 1000);
+        }
+    }, 100);
     });
 </script>
 </body>
