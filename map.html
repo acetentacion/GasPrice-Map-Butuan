@@ -691,18 +691,23 @@
 
     // Function to open station modal for new submission when no data exists
     window.openStationModalForNewSubmission = function(stationName, lat, lng) {
-        // Create a mock station object for the modal
+        // Create a mock station object for the modal with proper structure
         const mockStation = {
             stationName: stationName,
             lat: lat,
             lng: lng,
             brand: 'Unknown',
             address: 'Location: ' + lat.toFixed(4) + ', ' + lng.toFixed(4),
-            prices: [],
+            prices: {
+                diesel: null,
+                u91: null,
+                u95: null
+            },
             priceHistory: [],
             verificationStatus: 'pending',
             username: 'Community',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            submitted: null
         };
 
         // Set the current station globally so showStationDetails can access it
