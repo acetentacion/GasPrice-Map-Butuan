@@ -7,6 +7,118 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        /* Loading Screen Styles */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-in-out;
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+            max-width: 400px;
+            padding: 2rem;
+        }
+        
+        .loading-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem auto;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: pulse 2s infinite;
+        }
+        
+        .loading-logo svg {
+            width: 40px;
+            height: 40px;
+            fill: #3b82f6;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+            50% { transform: scale(1.05); box-shadow: 0 15px 40px rgba(0,0,0,0.3); }
+            100% { transform: scale(1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        }
+        
+        .loading-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .loading-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 2rem;
+        }
+        
+        .loading-progress {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        
+        .loading-progress-bar {
+            height: 100%;
+            background: white;
+            width: 0%;
+            transition: width 0.3s ease-in-out;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        
+        .loading-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            text-align: left;
+            font-size: 0.8rem;
+        }
+        
+        .loading-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+        
+        .loading-step.active {
+            opacity: 1;
+            font-weight: 600;
+        }
+        
+        .loading-step .step-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: background 0.3s ease;
+        }
+        
+        .loading-step.active .step-icon {
+            background: white;
+            box-shadow: 0 0 8px rgba(255,255,255,0.8);
+        }
+        
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #info-panel { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
@@ -99,6 +211,43 @@
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12h18"></path>
+                    <path d="M3 6h18"></path>
+                    <path d="M3 18h18"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </div>
+            <h1 class="loading-title">FuelFinder PH</h1>
+            <p class="loading-subtitle">Loading gas stations, user data, and map information...</p>
+            <div class="loading-progress">
+                <div id="loading-progress-bar" class="loading-progress-bar"></div>
+            </div>
+            <div class="loading-steps">
+                <div class="loading-step active" id="step-auth">
+                    <div class="step-icon"></div>
+                    <span>Checking authentication</span>
+                </div>
+                <div class="loading-step" id="step-stations">
+                    <div class="step-icon"></div>
+                    <span>Loading gas stations</span>
+                </div>
+                <div class="loading-step" id="step-admin">
+                    <div class="step-icon"></div>
+                    <span>Verifying permissions</span>
+                </div>
+                <div class="loading-step" id="step-ui">
+                    <div class="step-icon"></div>
+                    <span>Initializing interface</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="flex min-h-screen">
         <!-- Sidebar Navigation -->
         <aside class="hidden md:flex flex-col w-64 bg-white shadow-lg p-6 space-y-4">
@@ -946,74 +1095,147 @@
         }, 8000);
     };
 
-    // --- 5. Initialization ---
-    window.brandLogos = {
-        'shell': '/logos/shell.png',
-        'petron': '/logos/petron.png',
-        'caltex': '/logos/caltex.png',
-        'flyingv': '/logos/flyingv.png',
-        'jetti': '/logos/jetti.png',
-        'default': '/logos/default.png'
-    };
-
-    window.addEventListener('DOMContentLoaded', () => {
-        const username = localStorage.getItem('username');
-        // Set global username variable for other functions to use
-        if (username) {
-            window.username = username;
+    // --- 5. Loading Screen Management ---
+    function updateLoadingProgress(step, percentage) {
+        const progressBar = document.getElementById('loading-progress-bar');
+        const steps = ['step-auth', 'step-stations', 'step-admin', 'step-ui'];
+        
+        // Update progress bar
+        if (progressBar) {
+            progressBar.style.width = percentage + '%';
         }
         
+        // Update step indicators
+        steps.forEach((stepId, index) => {
+            const element = document.getElementById(stepId);
+            if (element) {
+                if (index < steps.indexOf(step)) {
+                    // Completed step
+                    element.classList.remove('active');
+                    element.style.opacity = '0.4';
+                    element.querySelector('.step-icon').style.background = '#4ade80';
+                } else if (index === steps.indexOf(step)) {
+                    // Current step
+                    element.classList.add('active');
+                    element.style.opacity = '1';
+                    element.querySelector('.step-icon').style.background = 'white';
+                } else {
+                    // Future step
+                    element.classList.remove('active');
+                    element.style.opacity = '0.4';
+                    element.querySelector('.step-icon').style.background = 'rgba(255,255,255,0.3)';
+                }
+            }
+        });
+    }
+
+    function hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }
+    }
+
+    async function initializeApplication() {
+        try {
+            updateLoadingProgress('step-auth', 10);
+            
+            // Step 1: Check authentication
+            const username = localStorage.getItem('username');
+            if (username) {
+                window.username = username;
+                // Verify user still exists and is valid
+                try {
+                    const response = await fetch(`${config.API_BASE_URL}/api/user-score?username=${encodeURIComponent(username)}`);
+                    if (!response.ok) {
+                        localStorage.removeItem('username');
+                        window.username = null;
+                    }
+                } catch (err) {
+                    console.warn('Authentication verification failed:', err);
+                    localStorage.removeItem('username');
+                    window.username = null;
+                }
+            }
+            
+            updateLoadingProgress('step-stations', 30);
+            
+            // Step 2: Load gas stations
+            const stations = await fetchGasStations();
+            allStations = stations;
+            
+            updateLoadingProgress('step-admin', 70);
+            
+            // Step 3: Update admin UI and permissions
+            updateAdminUI();
+            
+            updateLoadingProgress('step-ui', 90);
+            
+            // Step 4: Initialize UI state
+            initializeUIState();
+            
+            updateLoadingProgress('step-ui', 100);
+            
+            // All done - hide loading screen
+            hideLoadingScreen();
+            
+        } catch (error) {
+            console.error('Initialization error:', error);
+            // Still hide loading screen on error, but show error message
+            hideLoadingScreen();
+            showErrorMessage('Failed to load application. Please refresh the page.');
+        }
+    }
+
+    function initializeUIState() {
+        const username = localStorage.getItem('username');
+        
+        // Set up authentication state
         if (username) {
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('logout-btn').style.display = 'flex';
             document.getElementById('login-btn').style.display = 'none';
-            // Show and populate the user-info element
             const userEl = document.getElementById('user-info');
             if (userEl) {
                 userEl.innerText = username;
                 userEl.classList.remove('hidden');
             }
-            // Show the "My Profile" button when user is logged in
             document.getElementById('profile-btn').style.display = 'flex';
-            // Hide mobile login button when user is logged in
             const loginNavBtn = document.getElementById('login-nav-btn');
-            if (loginNavBtn) loginNavBtn.style.display = 'none';
-            // Show mobile logout button when user is logged in
+            const profileNavBtn = document.getElementById('profile-nav-btn');
             const logoutNavBtn = document.getElementById('logout-nav-btn');
+            if (loginNavBtn) loginNavBtn.style.display = 'none';
+            if (profileNavBtn) profileNavBtn.style.display = 'flex';
             if (logoutNavBtn) logoutNavBtn.style.display = 'flex';
         } else {
-            // Ensure user-info is hidden if no username
             const userEl = document.getElementById('user-info');
             if (userEl) {
                 userEl.innerText = '';
                 userEl.classList.add('hidden');
             }
-            // Show login button when not logged in
             document.getElementById('login-btn').style.display = 'flex';
-            // Show mobile login button when not logged in
             const loginNavBtn = document.getElementById('login-nav-btn');
             if (loginNavBtn) loginNavBtn.style.display = 'flex';
-            // Hide the "My Profile" button when user is not logged in
             document.getElementById('profile-btn').style.display = 'none';
-            // Hide mobile logout button when user is not logged in
             const logoutNavBtn = document.getElementById('logout-nav-btn');
             if (logoutNavBtn) logoutNavBtn.style.display = 'none';
         }
 
+        // Set up city coordinates
         const cityLat = localStorage.getItem('cityLat');
         const cityLng = localStorage.getItem('cityLng');
         if (cityLat && cityLng) {
             currentCityLat = parseFloat(cityLat);
             currentCityLng = parseFloat(cityLng);
         } else {
-            // Default to Butuan
             currentCityLat = 8.9475;
             currentCityLng = 125.5406;
         }
         
-        updateAdminUI();
-        
-        // Initialize button styles to show "All Fuels" as selected by default
+        // Initialize button styles
         document.querySelectorAll('.fuel-btn').forEach(btn => {
             const isActive = btn.getAttribute('data-fuel') === 'all';
             if (isActive) {
@@ -1027,22 +1249,23 @@
             }
         });
         
-        fetchGasStations().then(stations => {
-            console.log('Fetched stations:', stations);
-            allStations = stations;
-            renderStationList();
-        }).catch(error => {
-            console.error('Error fetching stations:', error);
-            // Show error message to user
-            const list = document.getElementById('station-list');
-            const count = document.getElementById('station-count');
-            if (list) {
-                list.innerHTML = '<p class="text-red-500 text-center py-8">Error loading stations. Please check your internet connection.</p>';
-            }
-            if (count) {
-                count.innerText = 'Error loading';
-            }
-        });
+        // Render station list
+        renderStationList();
+    }
+
+    // --- 6. Initialization ---
+    window.brandLogos = {
+        'shell': '/logos/shell.png',
+        'petron': '/logos/petron.png',
+        'caltex': '/logos/caltex.png',
+        'flyingv': '/logos/flyingv.png',
+        'jetti': '/logos/jetti.png',
+        'default': '/logos/default.png'
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        // Start the loading process
+        initializeApplication();
     });
 </script>
 </body>
