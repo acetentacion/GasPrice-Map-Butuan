@@ -50,7 +50,7 @@ export function closeStationRankings() {
     document.getElementById('station-rankings-modal').classList.add('hidden');
 }
 
-function loadStationRankings(fuelType) {
+export function loadStationRankings(fuelType) {
     const display = document.getElementById('current-fuel-display');
     const list = document.getElementById('station-rankings-list');
     

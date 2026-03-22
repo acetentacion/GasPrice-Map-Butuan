@@ -862,9 +862,51 @@
             return;
         }
 
-        // Sort stations by distance first, then by price (cheapest first within same distance range)
+        // Sort stations: prioritize price sorting when a specific fuel type is selected
         filteredStations.sort((a, b) => {
-            // Calculate distances for both stations
+            // If a specific fuel type is selected, sort by price first
+            if (currentFilter !== 'all') {
+                const priceA = a.prices[currentFilter];
+                const priceB = b.prices[currentFilter];
+                
+                // Handle null/undefined prices - stations with no price data should appear last
+                if (priceA === null || priceA === undefined) return 1;
+                if (priceB === null || priceB === undefined) return -1;
+                
+                // Primary sort: by price (cheapest first)
+                if (priceA !== priceB) {
+                    return priceA - priceB;
+                }
+                
+                // Secondary sort: by distance (closest first) for stations with same price
+                let distA, distB;
+                
+                // Use user's current location FIRST, then fall back to other options
+                let userLat, userLng;
+                if (window.userCurrentLat && window.userCurrentLng) {
+                    // Use the location we got during loading
+                    userLat = window.userCurrentLat;
+                    userLng = window.userCurrentLng;
+                } else if (window.currentLocationMarker) {
+                    const currentLatLng = window.currentLocationMarker.getLatLng();
+                    userLat = currentLatLng.lat;
+                    userLng = currentLatLng.lng;
+                } else if (currentCityLat && currentCityLng) {
+                    userLat = currentCityLat;
+                    userLng = currentCityLng;
+                } else {
+                    // Fallback to Butuan City center
+                    userLat = 8.9475;
+                    userLng = 125.5406;
+                }
+                
+                distA = calculateDistance(userLat, userLng, a.lat, a.lng);
+                distB = calculateDistance(userLat, userLng, b.lat, b.lng);
+                
+                return distA - distB;
+            }
+            
+            // For "All Fuels" filter, sort by distance first, then by minimum price
             let distA, distB;
             
             // Use user's current location FIRST, then fall back to other options
@@ -894,20 +936,23 @@
                 return distA - distB;
             }
             
-            // Secondary sort: by price (cheapest first) for the selected fuel type
-            if (currentFilter !== 'all') {
-                const priceA = a.prices[currentFilter];
-                const priceB = b.prices[currentFilter];
-                
-                // Handle null/undefined prices - stations with no price data should appear last
-                if (priceA === null || priceA === undefined) return 1;
-                if (priceB === null || priceB === undefined) return -1;
-                
-                return priceA - priceB;
-            }
+            // Secondary sort: by minimum price (cheapest first) for stations with same distance
+            const pricesA = a.prices || {};
+            const pricesB = b.prices || {};
             
-            // If distances and prices are the same, maintain original order
-            return 0;
+            const minPriceA = Math.min(
+                pricesA.diesel !== null && pricesA.diesel !== undefined ? pricesA.diesel : Infinity,
+                pricesA.u91 !== null && pricesA.u91 !== undefined ? pricesA.u91 : Infinity,
+                pricesA.u95 !== null && pricesA.u95 !== undefined ? pricesA.u95 : Infinity
+            );
+            
+            const minPriceB = Math.min(
+                pricesB.diesel !== null && pricesB.diesel !== undefined ? pricesB.diesel : Infinity,
+                pricesB.u91 !== null && pricesB.u91 !== undefined ? pricesB.u91 : Infinity,
+                pricesB.u95 !== null && pricesB.u95 !== undefined ? pricesB.u95 : Infinity
+            );
+            
+            return minPriceA - minPriceB;
         });
 
         list.innerHTML = filteredStations.map(station => {
