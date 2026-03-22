@@ -10,6 +10,13 @@ async function renderMarkers(stations) {
     } catch (err) {
         console.error('Failed to fetch submitted prices:', err);
     }
+    
+    // Refresh distances after markers are rendered
+    if (typeof window !== 'undefined' && window.calculateAllStationDistances) {
+        setTimeout(() => {
+            window.calculateAllStationDistances();
+        }, 100);
+    }
     stations.forEach(s => {
         const lat = s.lat || s.center?.lat;
         const lon = s.lon || s.center?.lon;

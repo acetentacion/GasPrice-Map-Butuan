@@ -142,6 +142,9 @@ function initLocationTracking() {
         });
     }
     
+    // Initialize page visibility handler to refresh distances
+    setupPageVisibilityHandler();
+    
     // Initialize global variables
     window.currentLocationMarker = null;
     window.currentAccuracyCircle = null;
@@ -774,6 +777,36 @@ function autoGetUserLocation() {
             maximumAge: 600000 // 10 minutes cache
         }
     );
+}
+
+// Function to refresh distances when map is loaded or user returns to page
+function refreshStationDistances() {
+    if (typeof window !== 'undefined' && window.map) {
+        // Try to get current user location if not available
+        if (!window.userLocation) {
+            autoGetUserLocation();
+        } else {
+            // If we have user location, recalculate all distances
+            calculateAllStationDistances();
+        }
+    }
+}
+
+// Function to handle page visibility changes to refresh distances
+function setupPageVisibilityHandler() {
+    if (typeof window !== 'undefined') {
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Page became visible, refresh distances
+                setTimeout(refreshStationDistances, 1000);
+            }
+        });
+        
+        // Also handle page focus events
+        window.addEventListener('focus', function() {
+            setTimeout(refreshStationDistances, 500);
+        });
+    }
 }
 
 // Expose functions globally for HTML onclick handlers
