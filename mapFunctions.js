@@ -1,5 +1,5 @@
 import config from './config.js';
-import { isInButuan, calculateDistance } from './utilFunctions.js';
+import { isInButuan, calculateDistance, getCurrentUserLocationForDistanceCalculation } from './utilFunctions.js';
 import { renderMarkers } from './markerFunctions.js';
 
 async function handleSearch() {
@@ -300,55 +300,21 @@ function useGPS() {
     }
 }
 
-// Function to get user's current location
-function getCurrentUserLocation() {
-    return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-            reject(new Error('Geolocation is not supported by this browser'));
-            return;
-        }
-        
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userLocation = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    accuracy: position.coords.accuracy
-                };
-                
-                // Store globally
-                window.userLocation = userLocation;
-                
-                // Create or update current location marker
-                createOrUpdateCurrentLocationMarker([userLocation.lat, userLocation.lng], userLocation.accuracy);
-                
-                resolve(userLocation);
-            },
-            (error) => {
-                console.error('Error getting user location:', error);
-                reject(error);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
-        );
-    });
-}
-
 // Function to calculate distances from user location to all stations
 function calculateAllStationDistances() {
-    if (!window.userLocation || !window.markerGroup) {
+    if (!window.markerGroup) {
         return;
     }
+    
+    // Get user location using unified location function
+    const userLocation = getCurrentUserLocationForDistanceCalculation();
     
     // Update all markers with distance information
     window.markerGroup.eachLayer(function(marker) {
         const stationLatLng = marker.getLatLng();
         const distance = calculateDistance(
-            window.userLocation.lat,
-            window.userLocation.lng,
+            userLocation.lat,
+            userLocation.lng,
             stationLatLng.lat,
             stationLatLng.lng
         );
@@ -365,8 +331,8 @@ function calculateAllStationDistances() {
     // Update info panel if a station is currently selected
     if (window.currentStation && window.currentStation.lat && window.currentStation.lng) {
         const distance = calculateDistance(
-            window.userLocation.lat,
-            window.userLocation.lng,
+            userLocation.lat,
+            userLocation.lng,
             window.currentStation.lat,
             window.currentStation.lng
         );
@@ -740,6 +706,32 @@ window.getDirections = function(lat, lng, stationName) {
     }
 };
 
+// Function to restore user location from localStorage
+function restoreLocationFromStorage() {
+    try {
+        const storedLocation = localStorage.getItem('userLocation');
+        if (storedLocation) {
+            const location = JSON.parse(storedLocation);
+            const age = Date.now() - location.timestamp;
+            
+            // Only use stored location if it's less than 30 minutes old
+            if (age < 1800000) { // 30 minutes
+                window.userLocation = location;
+                console.log('Restored location from storage:', location);
+                
+                // Recalculate distances if we have stations loaded
+                if (typeof window !== 'undefined' && window.allStations && window.allStations.length > 0) {
+                    calculateAllStationDistances();
+                }
+                return true;
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to restore location from storage:', error);
+    }
+    return false;
+}
+
 // Function to automatically get user location on page load
 function autoGetUserLocation() {
     if (!navigator.geolocation) {
@@ -753,22 +745,32 @@ function autoGetUserLocation() {
             const userLocation = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
-                accuracy: position.coords.accuracy
+                accuracy: position.coords.accuracy,
+                timestamp: Date.now()
             };
             
             // Store globally
             window.userLocation = userLocation;
             
-            // Create current location marker
-            createOrUpdateCurrentLocationMarker([userLocation.lat, userLocation.lng], userLocation.accuracy);
+            // Store in localStorage for persistence
+            localStorage.setItem('userLocation', JSON.stringify(userLocation));
             
-            // Calculate distances to all stations
-            calculateAllStationDistances();
+            // Create current location marker if on map page
+            if (typeof window !== 'undefined' && window.map) {
+                createOrUpdateCurrentLocationMarker([userLocation.lat, userLocation.lng], userLocation.accuracy);
+            }
             
             console.log('Auto location found:', userLocation);
+            
+            // Recalculate distances if we have stations loaded
+            if (typeof window !== 'undefined' && window.allStations && window.allStations.length > 0) {
+                calculateAllStationDistances();
+            }
         },
         (error) => {
             console.log('Auto location failed:', error.message);
+            // Try to restore from localStorage if available
+            restoreLocationFromStorage();
             // Don't show error to user for auto location, they can manually trigger it
         },
         {
@@ -781,9 +783,22 @@ function autoGetUserLocation() {
 
 // Function to refresh distances when map is loaded or user returns to page
 function refreshStationDistances() {
-    if (typeof window !== 'undefined' && window.map) {
-        // Try to get current user location if not available
-        if (!window.userLocation) {
+    console.log('Refreshing station distances...');
+    
+    // Try to get current user location if not available
+    if (!window.userLocation) {
+        const restored = restoreLocationFromStorage();
+        if (!restored) {
+            autoGetUserLocation();
+        } else {
+            // Recalculate distances with restored location
+            calculateAllStationDistances();
+        }
+    } else {
+        // Check if location is stale (older than 5 minutes)
+        const age = Date.now() - window.userLocation.timestamp;
+        if (age > 300000) { // 5 minutes
+            console.log('Location is stale, refreshing...');
             autoGetUserLocation();
         } else {
             // If we have user location, recalculate all distances
@@ -798,15 +813,73 @@ function setupPageVisibilityHandler() {
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 // Page became visible, refresh distances
+                console.log('Page became visible, refreshing distances...');
                 setTimeout(refreshStationDistances, 1000);
             }
         });
         
         // Also handle page focus events
         window.addEventListener('focus', function() {
+            console.log('Page focused, refreshing distances...');
             setTimeout(refreshStationDistances, 500);
         });
+        
+        // Handle page load/refresh
+        window.addEventListener('load', function() {
+            console.log('Page loaded, initializing location tracking...');
+            setTimeout(refreshStationDistances, 1000);
+        });
     }
+}
+
+// Enhanced function to get user's current location with better error handling
+function getCurrentUserLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by this browser'));
+            return;
+        }
+        
+        // First try to restore from storage
+        const restored = restoreLocationFromStorage();
+        if (restored) {
+            resolve(window.userLocation);
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                    timestamp: Date.now()
+                };
+                
+                // Store globally
+                window.userLocation = userLocation;
+                
+                // Store in localStorage for persistence
+                localStorage.setItem('userLocation', JSON.stringify(userLocation));
+                
+                // Create or update current location marker if on map page
+                if (typeof window !== 'undefined' && window.map) {
+                    createOrUpdateCurrentLocationMarker([userLocation.lat, userLocation.lng], userLocation.accuracy);
+                }
+                
+                resolve(userLocation);
+            },
+            (error) => {
+                console.error('Error getting user location:', error);
+                reject(error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    });
 }
 
 // Expose functions globally for HTML onclick handlers
@@ -817,5 +890,9 @@ window.fetchGasStations = fetchGasStations;
 window.renderMarkers = renderMarkers;
 window.initLocationTracking = initLocationTracking;
 window.autoGetUserLocation = autoGetUserLocation;
+window.refreshStationDistances = refreshStationDistances;
+window.restoreLocationFromStorage = restoreLocationFromStorage;
+window.getCurrentUserLocation = getCurrentUserLocation;
+window.toggleFollowMode = toggleFollowMode;
 
-export { handleSearch, selectCity, useGPS, showModal, hideModal, fetchGasStations, initLocationTracking, autoGetUserLocation };
+export { handleSearch, selectCity, useGPS, showModal, hideModal, fetchGasStations, initLocationTracking, autoGetUserLocation, refreshStationDistances, restoreLocationFromStorage, getCurrentUserLocation };

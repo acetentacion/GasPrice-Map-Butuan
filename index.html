@@ -367,6 +367,27 @@
                 </div>
             </div>
             
+            <!-- Location Status Indicator -->
+            <div id="location-status" class="hidden p-4 bg-blue-50 border border-blue-100 rounded-xl m-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        <div>
+                            <p id="location-status-text" class="text-sm font-bold text-blue-600">Location: Getting...</p>
+                            <p id="location-status-details" class="text-xs text-blue-500">Waiting for GPS signal...</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="follow-btn" onclick="toggleFollowMode()" class="px-3 py-1 text-xs font-bold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
+                            <span>Follow</span>
+                        </button>
+                        <button onclick="useGPS()" class="px-3 py-1 text-xs font-bold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Station List -->
             <div class="flex-1 flex flex-col md:flex-row">
                 <div class="flex-1 p-4">
@@ -642,7 +663,7 @@
     import { selectCity, handleSearch, useGPS, fetchGasStations } from './mapFunctions.js';
     import { renderMarkers } from './markerFunctions.js';
     import { showRankings, closeRankings, showUserProfile, closeUserProfile, showStationRankings, closeStationRankings } from './userUIHandlers.js';
-    import { calculateDistance, getTimeAgo, isInButuan } from './utilFunctions.js';
+    import { calculateDistance, getTimeAgo, isInButuan, getCurrentUserLocationForDistanceCalculation } from './utilFunctions.js';
     import { showStationDetails, submitPrices, vote } from './stationDetails.js';
 
     // --- 2. Expose Functions to Window (Global Scope) ---
@@ -879,57 +900,19 @@
                 }
                 
                 // Secondary sort: by distance (closest first) for stations with same price
-                let distA, distB;
-                
-                // Use user's current location FIRST, then fall back to other options
-                let userLat, userLng;
-                if (window.userCurrentLat && window.userCurrentLng) {
-                    // Use the location we got during loading
-                    userLat = window.userCurrentLat;
-                    userLng = window.userCurrentLng;
-                } else if (window.currentLocationMarker) {
-                    const currentLatLng = window.currentLocationMarker.getLatLng();
-                    userLat = currentLatLng.lat;
-                    userLng = currentLatLng.lng;
-                } else if (currentCityLat && currentCityLng) {
-                    userLat = currentCityLat;
-                    userLng = currentCityLng;
-                } else {
-                    // Fallback to Butuan City center
-                    userLat = 8.9475;
-                    userLng = 125.5406;
-                }
-                
-                distA = calculateDistance(userLat, userLng, a.lat, a.lng);
-                distB = calculateDistance(userLat, userLng, b.lat, b.lng);
+                // Use unified location function for consistent location source
+                const userLocation = getCurrentUserLocationForDistanceCalculation();
+                const distA = calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng);
+                const distB = calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
                 
                 return distA - distB;
             }
             
             // For "All Fuels" filter, sort by distance first, then by minimum price
-            let distA, distB;
-            
-            // Use user's current location FIRST, then fall back to other options
-            let userLat, userLng;
-            if (window.userCurrentLat && window.userCurrentLng) {
-                // Use the location we got during loading
-                userLat = window.userCurrentLat;
-                userLng = window.userCurrentLng;
-            } else if (window.currentLocationMarker) {
-                const currentLatLng = window.currentLocationMarker.getLatLng();
-                userLat = currentLatLng.lat;
-                userLng = currentLatLng.lng;
-            } else if (currentCityLat && currentCityLng) {
-                userLat = currentCityLat;
-                userLng = currentCityLng;
-            } else {
-                // Fallback to Butuan City center
-                userLat = 8.9475;
-                userLng = 125.5406;
-            }
-            
-            distA = calculateDistance(userLat, userLng, a.lat, a.lng);
-            distB = calculateDistance(userLat, userLng, b.lat, b.lng);
+            // Use unified location function for consistent location source
+            const userLocation = getCurrentUserLocationForDistanceCalculation();
+            const distA = calculateDistance(userLocation.lat, userLocation.lng, a.lat, a.lng);
+            const distB = calculateDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
             
             // Primary sort: by distance (closest first)
             if (distA !== distB) {
@@ -967,22 +950,9 @@
             );
             
             let distance = '--';
-            // Use user's current tracked location if available, otherwise fall back to city coordinates
-            let userLat, userLng;
-            if (window.currentLocationMarker) {
-                const currentLatLng = window.currentLocationMarker.getLatLng();
-                userLat = currentLatLng.lat;
-                userLng = currentLatLng.lng;
-            } else if (currentCityLat && currentCityLng) {
-                userLat = currentCityLat;
-                userLng = currentCityLng;
-            } else {
-                // Fallback to Butuan City center
-                userLat = 8.9475;
-                userLng = 125.5406;
-            }
-            
-            const dist = calculateDistance(userLat, userLng, station.lat, station.lng);
+            // Use unified location function for consistent distance calculation
+            const userLocation = getCurrentUserLocationForDistanceCalculation();
+            const dist = calculateDistance(userLocation.lat, userLocation.lng, station.lat, station.lng);
             if (dist !== undefined && dist !== null && dist !== '--') {
                 distance = dist;
             }
@@ -1308,6 +1278,7 @@ async function initializeApplication() {
             showErrorMessage('Failed to load application. Please refresh the page.');
         }
     }
+
 async function getCurrentLocation() {
         return new Promise((resolve, reject) => {
             // Check if geolocation is available
@@ -1368,6 +1339,120 @@ async function getCurrentLocation() {
             );
         });
     }
+
+// Enhanced function to restore user location from localStorage
+function restoreLocationFromStorage() {
+    try {
+        const storedLat = localStorage.getItem('userCurrentLat');
+        const storedLng = localStorage.getItem('userCurrentLng');
+        const storedAccuracy = localStorage.getItem('userCurrentAccuracy');
+        
+        if (storedLat && storedLng) {
+            const lat = parseFloat(storedLat);
+            const lng = parseFloat(storedLng);
+            const accuracy = storedAccuracy ? parseFloat(storedAccuracy) : null;
+            
+            // Store location in global variables
+            window.userCurrentLat = lat;
+            window.userCurrentLng = lng;
+            window.userCurrentAccuracy = accuracy;
+            
+            console.log('Restored location from storage:', { lat, lng, accuracy });
+            
+            // Recalculate distances if we have stations loaded
+            if (allStations && allStations.length > 0) {
+                renderStationList();
+            }
+            
+            return true;
+        }
+    } catch (error) {
+        console.warn('Failed to restore location from storage:', error);
+    }
+    return false;
+}
+
+// Enhanced function to refresh distances when user returns to page
+function refreshStationDistances() {
+    console.log('Refreshing station distances...');
+    
+    // Try to get current user location if not available
+    if (!window.userCurrentLat || !window.userCurrentLng) {
+        const restored = restoreLocationFromStorage();
+        if (!restored) {
+            getCurrentLocation().then(() => {
+                renderStationList();
+            });
+        } else {
+            renderStationList();
+        }
+    } else {
+        // Check if location is stale (older than 5 minutes)
+        const storedTime = localStorage.getItem('userLocationTimestamp');
+        const now = Date.now();
+        
+        if (!storedTime || (now - parseInt(storedTime)) > 300000) { // 5 minutes
+            console.log('Location is stale, refreshing...');
+            getCurrentLocation().then(() => {
+                renderStationList();
+            });
+        } else {
+            // If we have user location, recalculate all distances
+            renderStationList();
+        }
+    }
+}
+
+// Enhanced function to get current user location with better error handling
+function getCurrentUserLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by this browser'));
+            return;
+        }
+        
+        // First try to restore from storage
+        const restored = restoreLocationFromStorage();
+        if (restored) {
+            resolve({
+                lat: window.userCurrentLat,
+                lng: window.userCurrentLng,
+                accuracy: window.userCurrentAccuracy
+            });
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+                
+                // Store location in global variables
+                window.userCurrentLat = lat;
+                window.userCurrentLng = lng;
+                window.userCurrentAccuracy = accuracy;
+                
+                // Store in localStorage for persistence
+                localStorage.setItem('userCurrentLat', lat.toString());
+                localStorage.setItem('userCurrentLng', lng.toString());
+                localStorage.setItem('userCurrentAccuracy', accuracy.toString());
+                localStorage.setItem('userLocationTimestamp', Date.now().toString());
+                
+                resolve({ lat, lng, accuracy });
+            },
+            (error) => {
+                console.error('Error getting user location:', error);
+                reject(error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    });
+}
 
     function initializeUIState() {
         const username = localStorage.getItem('username');
@@ -1571,6 +1656,14 @@ async function getCurrentLocation() {
         // Initialize location tracking functionality
         // Wait for modules to be fully loaded before initializing
         waitForModulesAndInit();
+        
+        // Initialize location tracking for index.html (same as map.html)
+        if (typeof window.autoGetUserLocation === 'function') {
+            window.autoGetUserLocation();
+        }
+        
+        // Set up page visibility and focus handlers to refresh distances
+        setupPageVisibilityHandler();
     });
     
     // Function to wait for modules and initialize location tracking
@@ -1592,6 +1685,31 @@ async function getCurrentLocation() {
                     setupLocationTrackingFallback();
                 }
             }, 500);
+        }
+    }
+
+    // Function to handle page visibility changes to refresh distances
+    function setupPageVisibilityHandler() {
+        if (typeof window !== 'undefined') {
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    // Page became visible, refresh distances
+                    console.log('Page became visible, refreshing distances...');
+                    setTimeout(refreshStationDistances, 1000);
+                }
+            });
+            
+            // Also handle page focus events
+            window.addEventListener('focus', function() {
+                console.log('Page focused, refreshing distances...');
+                setTimeout(refreshStationDistances, 500);
+            });
+            
+            // Handle page load/refresh
+            window.addEventListener('load', function() {
+                console.log('Page loaded, initializing location tracking...');
+                setTimeout(refreshStationDistances, 1000);
+            });
         }
     }
 </script>
