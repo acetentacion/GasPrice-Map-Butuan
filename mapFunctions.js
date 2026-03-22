@@ -1,5 +1,5 @@
 import config from './config.js';
-import { isInButuan } from './utilFunctions.js';
+import { isInButuan, calculateDistance } from './utilFunctions.js';
 import { renderMarkers } from './markerFunctions.js';
 
 async function handleSearch() {
@@ -206,43 +206,6 @@ function getAccuracyLevel(accuracy) {
     return 'poor';
 }
 
-// Continuous location tracking for better accuracy
-function startContinuousTracking() {
-    if (typeof window === 'undefined' || !window.map) return;
-    
-    // Start continuous tracking with high accuracy
-    const watchId = navigator.geolocation.watchPosition(
-        function(position) {
-            const latlng = L.latLng(position.coords.latitude, position.coords.longitude);
-            const accuracy = position.coords.accuracy;
-            
-            // Update marker position
-            if (window.currentLocationMarker) {
-                window.currentLocationMarker.setLatLng(latlng);
-            }
-            
-            // Update accuracy visualization
-            updateAccuracyVisualization(latlng, accuracy);
-            
-            // If follow mode is enabled, center map
-            if (window.followMode) {
-                map.panTo(latlng);
-            }
-        },
-        function(error) {
-            console.error('Continuous tracking error:', error);
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0
-        }
-    );
-    
-    // Store watch ID for cleanup
-    window.locationWatchId = watchId;
-}
-
 // Stop continuous tracking
 function stopContinuousTracking() {
     if (window.locationWatchId) {
@@ -289,11 +252,21 @@ function useGPS() {
             }
             if (statusText) statusText.innerText = 'Location found';
             
+            // Store user location globally
+            window.userLocation = {
+                lat: e.latlng.lat,
+                lng: e.latlng.lng,
+                accuracy: e.accuracy
+            };
+            
             // Create or update current location marker
             createOrUpdateCurrentLocationMarker(e.latlng, e.accuracy);
             
             // Start continuous tracking for better accuracy
             startContinuousTracking();
+            
+            // Calculate distances to all stations
+            calculateAllStationDistances();
             
             // If follow mode is enabled, center on location
             if (window.followMode) {
@@ -322,6 +295,167 @@ function useGPS() {
             console.error('Location error:', e);
         });
     }
+}
+
+// Function to get user's current location
+function getCurrentUserLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by this browser'));
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+                
+                // Store globally
+                window.userLocation = userLocation;
+                
+                // Create or update current location marker
+                createOrUpdateCurrentLocationMarker([userLocation.lat, userLocation.lng], userLocation.accuracy);
+                
+                resolve(userLocation);
+            },
+            (error) => {
+                console.error('Error getting user location:', error);
+                reject(error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    });
+}
+
+// Function to calculate distances from user location to all stations
+function calculateAllStationDistances() {
+    if (!window.userLocation || !window.markerGroup) {
+        return;
+    }
+    
+    // Update all markers with distance information
+    window.markerGroup.eachLayer(function(marker) {
+        const stationLatLng = marker.getLatLng();
+        const distance = calculateDistance(
+            window.userLocation.lat,
+            window.userLocation.lng,
+            stationLatLng.lat,
+            stationLatLng.lng
+        );
+        
+        // Store distance on the marker for later use
+        marker.distance = parseFloat(distance);
+        
+        // Update marker popup with distance if it's open
+        if (marker.isPopupOpen()) {
+            updatePopupWithDistance(marker, distance);
+        }
+    });
+    
+    // Update info panel if a station is currently selected
+    if (window.currentStation && window.currentStation.lat && window.currentStation.lng) {
+        const distance = calculateDistance(
+            window.userLocation.lat,
+            window.userLocation.lng,
+            window.currentStation.lat,
+            window.currentStation.lng
+        );
+        
+        updateInfoPanelDistance(distance);
+    }
+}
+
+// Function to update popup with distance information
+function updatePopupWithDistance(marker, distance) {
+    const popup = marker.getPopup();
+    if (popup) {
+        let content = popup.getContent();
+        
+        // Remove existing distance info if present
+        content = content.replace(/<div class="distance-info">[\s\S]*?<\/div>/, '');
+        
+        // Add distance info
+        const distanceHtml = `<div class="distance-info mt-2 p-2 bg-blue-50 border border-blue-100 rounded-lg">
+            <div class="text-xs font-bold text-blue-500 uppercase tracking-widest">Distance</div>
+            <div class="text-lg font-black text-gray-900">${distance} km</div>
+        </div>`;
+        
+        // Insert distance info before the buttons
+        content = content.replace(
+            /(<div class="flex gap-2 mt-4">)/,
+            distanceHtml + '$1'
+        );
+        
+        popup.setContent(content);
+    }
+}
+
+// Function to update info panel distance display
+function updateInfoPanelDistance(distance) {
+    const distanceValue = document.getElementById('distance-value');
+    const distanceIndicator = document.getElementById('distance-indicator');
+    
+    if (distanceValue) {
+        distanceValue.innerText = `${distance} km`;
+    }
+    
+    if (distanceIndicator) {
+        distanceIndicator.style.display = 'block';
+    }
+}
+
+// Enhanced continuous tracking to update distances in real-time
+function startContinuousTracking() {
+    if (typeof window === 'undefined' || !window.map) return;
+    
+    // Start continuous tracking with high accuracy
+    const watchId = navigator.geolocation.watchPosition(
+        function(position) {
+            const latlng = L.latLng(position.coords.latitude, position.coords.longitude);
+            const accuracy = position.coords.accuracy;
+            
+            // Update user location globally
+            window.userLocation = {
+                lat: latlng.lat,
+                lng: latlng.lng,
+                accuracy: accuracy
+            };
+            
+            // Update marker position
+            if (window.currentLocationMarker) {
+                window.currentLocationMarker.setLatLng(latlng);
+            }
+            
+            // Update accuracy visualization
+            updateAccuracyVisualization(latlng, accuracy);
+            
+            // Recalculate distances to all stations
+            calculateAllStationDistances();
+            
+            // If follow mode is enabled, center map
+            if (window.followMode) {
+                map.panTo(latlng);
+            }
+        },
+        function(error) {
+            console.error('Continuous tracking error:', error);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        }
+    );
+    
+    // Store watch ID for cleanup
+    window.locationWatchId = watchId;
 }
 
 function showModal() { 
@@ -603,4 +737,52 @@ window.getDirections = function(lat, lng, stationName) {
     }
 };
 
-export { handleSearch, selectCity, useGPS, showModal, hideModal, fetchGasStations, initLocationTracking };
+// Function to automatically get user location on page load
+function autoGetUserLocation() {
+    if (!navigator.geolocation) {
+        console.log('Geolocation is not supported by this browser');
+        return;
+    }
+    
+    // Try to get user location automatically when page loads
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            };
+            
+            // Store globally
+            window.userLocation = userLocation;
+            
+            // Create current location marker
+            createOrUpdateCurrentLocationMarker([userLocation.lat, userLocation.lng], userLocation.accuracy);
+            
+            // Calculate distances to all stations
+            calculateAllStationDistances();
+            
+            console.log('Auto location found:', userLocation);
+        },
+        (error) => {
+            console.log('Auto location failed:', error.message);
+            // Don't show error to user for auto location, they can manually trigger it
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 600000 // 10 minutes cache
+        }
+    );
+}
+
+// Expose functions globally for HTML onclick handlers
+window.selectCity = selectCity;
+window.handleSearch = handleSearch;
+window.useGPS = useGPS;
+window.fetchGasStations = fetchGasStations;
+window.renderMarkers = renderMarkers;
+window.initLocationTracking = initLocationTracking;
+window.autoGetUserLocation = autoGetUserLocation;
+
+export { handleSearch, selectCity, useGPS, showModal, hideModal, fetchGasStations, initLocationTracking, autoGetUserLocation };

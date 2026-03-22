@@ -62,6 +62,26 @@ function closeLoginRequiredModal() {
     }
 }
 
+function openStationDetails(name, brand, lat, lon, address, diesel, u91, u95, hasSubmission) {
+    const prices = {
+        diesel: diesel || 0,
+        u91: u91 || 0,
+        u95: u95 || 0
+    };
+    
+    const stationData = {
+        name: name,
+        brand: brand,
+        lat: lat,
+        lng: lon,
+        address: address,
+        prices: prices,
+        submitted: hasSubmission ? null : null
+    };
+    
+    showStationDetails(stationData);
+}
+
 function showStationDetails(data) {
     currentStation = data;
     
@@ -69,6 +89,7 @@ function showStationDetails(data) {
     const stationBrandEl = document.getElementById('station-brand');
     const stationAddressEl = document.getElementById('station-address');
     
+    // Always try to use the info panel first - only fall back to map popup if explicitly requested
     if (!stationNameEl || !stationBrandEl || !stationAddressEl) {
         console.log('Info panel elements not found - showing map-focused details.');
         
@@ -311,6 +332,11 @@ function showStationDetails(data) {
         return;
     }
     
+    // Close any existing info panel before opening new one
+    if (window.closePanel) {
+        window.closePanel();
+    }
+    
     panel.classList.remove('hidden');
     
     setTimeout(() => {
@@ -430,6 +456,7 @@ function submitPrices() {
 }
 
 if (typeof window !== 'undefined') {
+    window.openStationDetails = openStationDetails;
     window.showStationDetails = showStationDetails;
     window.submitPrices = submitPrices;
     window.showSuccessMessage = showSuccessMessage;
