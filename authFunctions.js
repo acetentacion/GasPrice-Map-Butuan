@@ -12,11 +12,16 @@ function login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
     })
-    .then(res => res.json())
-        .then(data => {
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
         if (data.error) {
             showErrorMessage(data.error);
-        } else {
+        } else if (data.message === 'Login successful') {
             localStorage.setItem('username', data.username);
             window.username = data.username;
             document.getElementById('login-modal').style.display = 'none';
@@ -32,6 +37,8 @@ function login() {
             if (profileNavBtn) profileNavBtn.style.display = 'flex';
             if (logoutNavBtn) logoutNavBtn.style.display = 'flex';
             if (window.updateAdminUI) window.updateAdminUI();
+        } else {
+            showErrorMessage('Invalid response from server.');
         }
     })
     .catch(err => {

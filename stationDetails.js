@@ -321,7 +321,24 @@ function showStationDetails(data) {
     if (data.submitted && data.submitted.photoUrl) {
         const stationAddressEl = document.getElementById('station-address');
         if (stationAddressEl) {
-            stationAddressEl.innerHTML += `<br><img src="${data.submitted.photoUrl}" alt="Price Photo" style="max-width:200px; border-radius:12px; margin-top:8px;">`;
+            // Remove any existing photo to prevent duplicates
+            const existingPhoto = stationAddressEl.querySelector('img');
+            if (existingPhoto) {
+                existingPhoto.remove();
+            }
+            
+            // Add the photo after the address
+            const photoImg = document.createElement('img');
+            photoImg.src = data.submitted.photoUrl;
+            photoImg.alt = "Price Photo";
+            photoImg.style.maxWidth = "200px";
+            photoImg.style.borderRadius = "12px";
+            photoImg.style.marginTop = "8px";
+            photoImg.style.display = "block";
+            photoImg.style.marginBottom = "8px";
+            photoImg.style.border = "2px solid #e5e7eb";
+            
+            stationAddressEl.appendChild(photoImg);
         }
     }
     
@@ -398,26 +415,58 @@ function submitPrices() {
         showLoginRequiredModal();
         return;
     }
+    
+    // Get station data from the info panel
+    const stationNameEl = document.getElementById('station-name');
+    const stationName = stationNameEl ? stationNameEl.innerText : (currentStation ? currentStation.stationName || currentStation.name : null);
+    
+    if (!stationName) {
+        showErrorMessage('No station selected. Please select a station first.');
+        return;
+    }
+    
     const diesel = parseFloat(document.getElementById('new-diesel').value);
     const u91 = parseFloat(document.getElementById('new-u91').value);
     const u95 = parseFloat(document.getElementById('new-u95').value);
+    
     if (isNaN(diesel) || isNaN(u91) || isNaN(u95)) {
         showErrorMessage('Please enter valid prices.');
         return;
     }
+    
+    // Get station coordinates - try multiple sources
+    let lat, lng;
+    if (currentStation && currentStation.lat && currentStation.lng) {
+        lat = currentStation.lat;
+        lng = currentStation.lng;
+    } else {
+        // Try to get from the info panel or map
+        if (typeof window !== 'undefined' && window.map && window.map.getCenter) {
+            const center = window.map.getCenter();
+            lat = center.lat;
+            lng = center.lng;
+        } else {
+            // Fallback to Butuan City center
+            lat = 8.9475;
+            lng = 125.5406;
+        }
+    }
+    
     const photoInput = document.getElementById('price-photo');
     const formData = new FormData();
-    formData.append('stationName', String(currentStation.stationName || currentStation.name));
-    formData.append('lat', String(currentStation.lat));
-    formData.append('lng', String(currentStation.lng));
+    formData.append('stationName', String(stationName));
+    formData.append('lat', String(lat));
+    formData.append('lng', String(lng));
     formData.append('username', String(username));
     formData.append('diesel', String(diesel));
     formData.append('u91', String(u91));
     formData.append('u95', String(u95));
     formData.append('timestamp', new Date().toISOString());
+    
     if (photoInput.files && photoInput.files[0]) {
         formData.append('photo', photoInput.files[0]);
     }
+    
     fetch(`${config.API_BASE_URL}/api/prices`, {
         method: 'POST',
         body: formData

@@ -80,7 +80,7 @@
             }
         }
 
-        function approveSubmission(stationName, lat, lng) {
+        async function approveSubmission(stationName, lat, lng) {
             const apiUrl = (typeof config !== 'undefined' && config.API_BASE_URL) 
                 ? config.API_BASE_URL 
                 : 'https://gasprice-map-butuan.onrender.com';
@@ -93,25 +93,36 @@
                 return;
             }
             
-            fetch(`${apiUrl}/api/approve-price`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stationName: stationName.trim(),
-                    lat: Number(lat),
-                    lng: Number(lng),
-                    adminUsername: adminUsername
-                })
-            }).then(res => res.json()).then(result => {
-                showActionModal(result.message || result.error);
-                showPendingApprovals();
-            }).catch(err => {
+            try {
+                const response = await fetch(`${apiUrl}/api/approve-price`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stationName: stationName.trim(),
+                        lat: Number(lat),
+                        lng: Number(lng),
+                        adminUsername: adminUsername
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showActionModal(result.message || 'Submission approved successfully');
+                    // Wait a short delay to ensure database update is complete before refreshing
+                    setTimeout(() => {
+                        showPendingApprovals();
+                    }, 500);
+                } else {
+                    showActionModal(result.error || 'Failed to approve submission');
+                }
+            } catch (err) {
                 console.error('Approve error:', err);
                 showActionModal('Error approving submission');
-            });
+            }
         }
 
-        function rejectSubmission(stationName, lat, lng) {
+        async function rejectSubmission(stationName, lat, lng) {
             const apiUrl = (typeof config !== 'undefined' && config.API_BASE_URL) 
                 ? config.API_BASE_URL 
                 : 'https://gasprice-map-butuan.onrender.com';
@@ -124,22 +135,33 @@
                 return;
             }
             
-            fetch(`${apiUrl}/api/reject-price`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stationName: stationName.trim(),
-                    lat: Number(lat),
-                    lng: Number(lng),
-                    adminUsername: adminUsername
-                })
-            }).then(res => res.json()).then(result => {
-                showActionModal(result.message || result.error);
-                showPendingApprovals();
-            }).catch(err => {
+            try {
+                const response = await fetch(`${apiUrl}/api/reject-price`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stationName: stationName.trim(),
+                        lat: Number(lat),
+                        lng: Number(lng),
+                        adminUsername: adminUsername
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showActionModal(result.message || 'Submission rejected successfully');
+                    // Wait a short delay to ensure database update is complete before refreshing
+                    setTimeout(() => {
+                        showPendingApprovals();
+                    }, 500);
+                } else {
+                    showActionModal(result.error || 'Failed to reject submission');
+                }
+            } catch (err) {
                 console.error('Reject error:', err);
                 showActionModal('Error rejecting submission');
-            });
+            }
         }
 
         function showActionModal(message) {
